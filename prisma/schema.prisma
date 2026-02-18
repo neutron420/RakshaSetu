@@ -1,0 +1,262 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserRole {
+  CITIZEN
+  ADMIN
+  RESPONDER
+}
+
+enum VerificationStatus {
+  PENDING
+  VERIFIED
+  REJECTED
+}
+
+enum SosCategory {
+  FLOOD
+  FIRE
+  EARTHQUAKE
+  ACCIDENT
+  MEDICAL
+  VIOLENCE
+  LANDSLIDE
+  CYCLONE
+  OTHER
+}
+
+enum SosReportStatus {
+  RECEIVED
+  TRIAGED
+  LINKED
+  RESOLVED
+  REJECTED
+}
+
+enum IncidentStatus {
+  OPEN
+  INVESTIGATING
+  IN_PROGRESS
+  CONTAINED
+  RESOLVED
+  CLOSED
+}
+
+enum IncidentPriority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum AssignmentStatus {
+  PENDING
+  ACKNOWLEDGED
+  EN_ROUTE
+  ON_SITE
+  COMPLETED
+  CANCELED
+}
+
+enum MediaType {
+  IMAGE
+  VIDEO
+  AUDIO
+  DOCUMENT
+}
+
+enum EventPublishStatus {
+  PENDING
+  PROCESSING
+  PUBLISHED
+  FAILED
+}
+
+model User {
+  id                  String              @id @default(uuid()) @db.Uuid
+  email               String              @unique @db.VarChar(255)
+  phone               String?             @unique @db.VarChar(20)
+  passwordHash        String?             @db.VarChar(255)
+  fullName            String              @db.VarChar(120)
+  role                UserRole
+  isActive            Boolean             @default(true)
+  lastSeenAt          DateTime?           @db.Timestamptz(6)
+  createdAt           DateTime            @default(now()) @db.Timestamptz(6)
+  updatedAt           DateTime            @updatedAt @db.Timestamptz(6)
+  reports             SosReport[]         @relation("ReporterReports")
+  assignedIncidents   IncidentAssignment[] @relation("AssignedResponder")
+  assignedBy          IncidentAssignment[] @relation("AssignedByAdmin")
+  statusEvents        IncidentStatusEvent[]
+  eventOutboxMessages EventOutboxMessage[]
+  managedTeams        RescueTeam[]        @relation("TeamLead")
+  teamMemberships     TeamMember[]
+}
+
+model RescueTeam {
+  id             String               @id @default(uuid()) @db.Uuid
+  name           String               @unique @db.VarChar(120)
+  code           String               @unique @db.VarChar(40)
+  leadUserId     String?              @db.Uuid
+  isActive       Boolean              @default(true)
+  createdAt      DateTime             @default(now()) @db.Timestamptz(6)
+  updatedAt      DateTime             @updatedAt @db.Timestamptz(6)
+  lead           User?                @relation("TeamLead", fields: [leadUserId], references: [id], onDelete: SetNull)
+  members        TeamMember[]
+  assignments    IncidentAssignment[]
+
+  @@index([leadUserId], map: "idx_rescue_team_lead")
+}
+
+model TeamMember {
+  id           String     @id @default(uuid()) @db.Uuid
+  teamId       String     @db.Uuid
+  userId       String     @db.Uuid
+  joinedAt     DateTime   @default(now()) @db.Timestamptz(6)
+  isOnDuty     Boolean    @default(false)
+  team         RescueTeam @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([teamId, userId], map: "ux_team_member")
+  @@index([userId], map: "idx_team_member_user")
+}
+
+model Incident {
+  id                  String                @id @default(uuid()) @db.Uuid
+  category            SosCategory
+  status              IncidentStatus        @default(OPEN)
+  priority            IncidentPriority      @default(MEDIUM)
+  title               String                @db.VarChar(180)
+  description         String?               @db.Text
+  reportCount         Int                   @default(1)
+  confidenceScore     Decimal?              @db.Decimal(5, 2)
+  clusterRadiusMeters Int                   @default(1000)
+  centroidLat         Decimal               @db.Decimal(9, 6)
+  centroidLng         Decimal               @db.Decimal(9, 6)
+  // PostGIS geography point for fast geo-proximity queries.
+  centroidGeo         Unsupported("geography(Point, 4326)")
+  firstReportedAt     DateTime              @db.Timestamptz(6)
+  lastReportedAt      DateTime              @db.Timestamptz(6)
+  resolvedAt          DateTime?             @db.Timestamptz(6)
+  createdAt           DateTime              @default(now()) @db.Timestamptz(6)
+  updatedAt           DateTime              @updatedAt @db.Timestamptz(6)
+  reports             SosReport[]
+  assignments         IncidentAssignment[]
+  statusEvents        IncidentStatusEvent[]
+
+  @@index([category, status], map: "idx_incident_category_status")
+  @@index([status, priority, lastReportedAt], map: "idx_incident_queue")
+  @@index([firstReportedAt], map: "idx_incident_first_reported")
+}
+
+model SosReport {
+  id                    String           @id @default(uuid()) @db.Uuid
+  reporterId            String           @db.Uuid
+  incidentId            String?          @db.Uuid
+  category              SosCategory
+  status                SosReportStatus  @default(RECEIVED)
+  verificationStatus    VerificationStatus @default(PENDING)
+  description           String?          @db.Text
+  severity              Int?             @db.SmallInt
+  source                String           @default("mobile") @db.VarChar(32)
+  // Idempotency key from client to prevent duplicate report creation.
+  clientReportId        String?          @db.VarChar(64)
+  latitude              Decimal          @db.Decimal(9, 6)
+  longitude             Decimal          @db.Decimal(9, 6)
+  accuracyMeters        Decimal?         @db.Decimal(10, 2)
+  locationGeo           Unsupported("geography(Point, 4326)")
+  happenedAt            DateTime?        @db.Timestamptz(6)
+  reportedAt            DateTime         @default(now()) @db.Timestamptz(6)
+  createdAt             DateTime         @default(now()) @db.Timestamptz(6)
+  updatedAt             DateTime         @updatedAt @db.Timestamptz(6)
+  reporter              User             @relation("ReporterReports", fields: [reporterId], references: [id], onDelete: Restrict)
+  incident              Incident?        @relation(fields: [incidentId], references: [id], onDelete: SetNull)
+  mediaAttachments      SosReportMedia[]
+
+  @@unique([reporterId, clientReportId], map: "ux_sos_report_idempotency")
+  @@index([incidentId, reportedAt], map: "idx_sos_report_incident_time")
+  @@index([reporterId, reportedAt], map: "idx_sos_report_reporter_time")
+  @@index([category, status], map: "idx_sos_report_category_status")
+  @@index([verificationStatus, reportedAt], map: "idx_sos_report_verification")
+}
+
+model SosReportMedia {
+  id            String     @id @default(uuid()) @db.Uuid
+  reportId      String     @db.Uuid
+  mediaType     MediaType
+  url           String     @db.Text
+  thumbnailUrl  String?    @db.Text
+  metadata      Json?
+  uploadedAt    DateTime   @default(now()) @db.Timestamptz(6)
+  report        SosReport  @relation(fields: [reportId], references: [id], onDelete: Cascade)
+
+  @@index([reportId], map: "idx_sos_media_report")
+}
+
+model IncidentAssignment {
+  id               String            @id @default(uuid()) @db.Uuid
+  incidentId       String            @db.Uuid
+  teamId           String            @db.Uuid
+  responderId      String?           @db.Uuid
+  assignedById     String            @db.Uuid
+  status           AssignmentStatus  @default(PENDING)
+  note             String?           @db.Text
+  assignedAt       DateTime          @default(now()) @db.Timestamptz(6)
+  acknowledgedAt   DateTime?         @db.Timestamptz(6)
+  arrivedAt        DateTime?         @db.Timestamptz(6)
+  completedAt      DateTime?         @db.Timestamptz(6)
+  createdAt        DateTime          @default(now()) @db.Timestamptz(6)
+  updatedAt        DateTime          @updatedAt @db.Timestamptz(6)
+  incident         Incident          @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+  team             RescueTeam        @relation(fields: [teamId], references: [id], onDelete: Restrict)
+  responder        User?             @relation("AssignedResponder", fields: [responderId], references: [id], onDelete: SetNull)
+  assignedBy       User              @relation("AssignedByAdmin", fields: [assignedById], references: [id], onDelete: Restrict)
+
+  @@index([incidentId, status], map: "idx_incident_assignment_status")
+  @@index([teamId, status], map: "idx_team_assignment_status")
+  @@index([responderId, status], map: "idx_responder_assignment_status")
+}
+
+model IncidentStatusEvent {
+  id               String          @id @default(uuid()) @db.Uuid
+  incidentId       String          @db.Uuid
+  actorUserId      String?         @db.Uuid
+  previousStatus   IncidentStatus?
+  newStatus        IncidentStatus
+  source           String          @default("system") @db.VarChar(32)
+  message          String?         @db.Text
+  metadata         Json?
+  createdAt        DateTime        @default(now()) @db.Timestamptz(6)
+  incident         Incident        @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+  actor            User?           @relation(fields: [actorUserId], references: [id], onDelete: SetNull)
+
+  @@index([incidentId, createdAt], map: "idx_incident_status_event_stream")
+  @@index([createdAt], map: "idx_incident_status_event_created")
+}
+
+model EventOutboxMessage {
+  id              String             @id @default(uuid()) @db.Uuid
+  aggregateType   String             @db.VarChar(50)
+  aggregateId     String             @db.Uuid
+  eventType       String             @db.VarChar(80)
+  partitionKey    String             @db.VarChar(120)
+  payload         Json
+  headers         Json?
+  publishStatus   EventPublishStatus @default(PENDING)
+  retries         Int                @default(0)
+  availableAt     DateTime           @default(now()) @db.Timestamptz(6)
+  publishedAt     DateTime?          @db.Timestamptz(6)
+  errorMessage    String?            @db.Text
+  createdById     String?            @db.Uuid
+  createdAt       DateTime           @default(now()) @db.Timestamptz(6)
+  createdBy       User?              @relation(fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@index([publishStatus, availableAt], map: "idx_outbox_dispatch")
+  @@index([aggregateType, aggregateId], map: "idx_outbox_aggregate")
+  @@index([createdAt], map: "idx_outbox_created")
+}
