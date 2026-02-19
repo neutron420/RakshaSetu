@@ -4,9 +4,9 @@ async function main() {
   console.log("Enabling PostGIS extension...");
   try {
     await prisma.$executeRawUnsafe("CREATE EXTENSION IF NOT EXISTS postgis;");
-    console.log("✅ PostGIS extension enabled.");
+    console.log("PostGIS extension enabled.");
   } catch (error) {
-    console.error("❌ Failed to enable PostGIS:", error);
+    console.error("Failed to enable PostGIS:", error);
   }
 }
 
