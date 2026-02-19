@@ -4,7 +4,7 @@ import type { UpdateMeInput } from "./users.schema";
 
 function toProfile(user: {
   id: string;
-  email: string;
+  email: string | null;
   fullName: string;
   phone: string | null;
   role: string;

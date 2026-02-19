@@ -11,6 +11,7 @@ export async function updateUserById(id: string, input: UpdateMeInput) {
     data: {
       fullName: input.fullName,
       phone: input.phone === null ? null : input.phone,
+      pushToken: input.pushToken,
     },
   });
 }

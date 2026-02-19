@@ -14,3 +14,14 @@ export const loginSchema = z.object({
 
 export type SignupInput = z.infer<typeof signupSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
+
+export const requestOtpSchema = z.object({
+  phone: z.string().min(10).max(15),
+});
+export type RequestOtpInput = z.infer<typeof requestOtpSchema>;
+
+export const verifyOtpSchema = z.object({
+  phone: z.string().min(10).max(15),
+  code: z.string().length(6),
+});
+export type VerifyOtpInput = z.infer<typeof verifyOtpSchema>;

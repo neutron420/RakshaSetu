@@ -37,9 +37,18 @@ app.use(errorMiddleware);
 const httpServer = createServer(app);
 initWebSocket(httpServer);
 
+import { processOutbox } from "./modules/outbox/outbox.service";
+
 httpServer.listen(env.port, () => {
   console.log(`user-be running on port ${env.port}`);
 });
+
+// Start background worker for event outbox
+setInterval(() => {
+  void processOutbox().catch((err) => {
+    console.error("Error processing outbox:", err);
+  });
+}, 5000);
 
 async function shutdown(signal: string) {
   console.log(`Received ${signal}. Shutting down...`);

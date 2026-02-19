@@ -19,3 +19,12 @@ export const createSosSchema = z.object({
 });
 
 export type CreateSosInput = z.infer<typeof createSosSchema>;
+
+export const addMediaSchema = z.object({
+  mediaType: z.enum(["IMAGE", "VIDEO", "AUDIO", "DOCUMENT"]),
+  url: z.string().url().max(2000),
+  thumbnailUrl: z.string().url().max(2000).optional(),
+  metadata: z.record(z.unknown()).optional(),
+});
+
+export type AddMediaInput = z.infer<typeof addMediaSchema>;

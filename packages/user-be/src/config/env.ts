@@ -22,4 +22,13 @@ export const env = {
   databaseUrl: process.env.DATABASE_URL ?? "",
   jwtSecret: process.env.JWT_SECRET ?? "dev-secret-change-me",
   jwtExpiresIn: process.env.JWT_EXPIRES_IN ?? "7d",
+  // R2 Storage
+  r2Endpoint: process.env.R2_ENDPOINT ?? "https://<ACCOUNT_ID>.r2.cloudflarestorage.com",
+  r2AccessKeyId: process.env.R2_ACCESS_KEY_ID ?? "mock_access_key",
+  r2SecretAccessKey: process.env.R2_SECRET_ACCESS_KEY ?? "mock_secret_key",
+  r2BucketName: process.env.R2_BUCKET_NAME ?? "rakshasetu-media",
+  r2PublicDomain: process.env.R2_PUBLIC_DOMAIN,
+  // Push & SMS
+  expoAccessToken: process.env.EXPO_ACCESS_TOKEN,
+  smsProviderApiKey: process.env.SMS_PROVIDER_API_KEY,
 };
