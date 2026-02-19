@@ -7,13 +7,12 @@ export function emitSosCreated(reporterId: string, report: {
   longitude: number;
   reportedAt: Date;
 }) {
-  // Notify the reporter
+
   sendToUser(reporterId, {
     type: "sos:submitted",
     payload: report,
   });
-
-  // Alert all responders and admins
+  
   broadcastToRole("RESPONDER", {
     type: "sos:new",
     payload: { ...report, reporterId },
