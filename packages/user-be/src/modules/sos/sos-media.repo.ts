@@ -2,7 +2,7 @@ import { prisma } from "../../common/db/prisma";
 
 export async function addMedia(data: {
   reportId: string;
-  mediaType: string;
+  mediaType:string;
   url: string;
   thumbnailUrl?: string;
   metadata?: unknown;
