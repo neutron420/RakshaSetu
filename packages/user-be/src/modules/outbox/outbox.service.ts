@@ -1,5 +1,5 @@
 import { broadcast } from "../../ws";
-import { createOutboxMessage, markFailed, markPublished, pollPendingMessages } from "./outbox.repo";
+import { claimPendingMessages, createOutboxMessage, markFailed, markPublished } from "./outbox.repo";
 
 /**
  * Enqueue an event into the outbox table.
@@ -17,11 +17,11 @@ export async function enqueueEvent(data: {
 }
 
 /**
- * Poll pending outbox messages and dispatch them via WebSocket.
- * Call this from a setInterval or background worker.
+ * Claim pending outbox messages (with row lock) and dispatch via WebSocket.
+ * Safe for multiple instances: each message is processed at most once.
  */
 export async function processOutbox(batchSize = 10) {
-  const messages = await pollPendingMessages(batchSize);
+  const messages = await claimPendingMessages(batchSize);
 
   for (const msg of messages) {
     try {

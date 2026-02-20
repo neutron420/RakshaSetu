@@ -16,10 +16,17 @@ function asNumber(value: string | undefined, fallback: number): number {
   return Number.isNaN(parsed) ? fallback : parsed;
 }
 
+const databaseUrl = process.env.DATABASE_URL ?? "";
+if (!databaseUrl.trim()) {
+  throw new Error(
+    "DATABASE_URL is required. Set it in .env (root or packages/user-be/.env). See .env.example."
+  );
+}
+
 export const env = {
   nodeEnv: process.env.NODE_ENV ?? "development",
   port: asNumber(process.env.USER_BE_PORT, 5001),
-  databaseUrl: process.env.DATABASE_URL ?? "",
+  databaseUrl,
   jwtSecret: process.env.JWT_SECRET ?? "dev-secret-change-me",
   jwtExpiresIn: process.env.JWT_EXPIRES_IN ?? "7d",
   // R2 Storage

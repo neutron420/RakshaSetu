@@ -19,13 +19,13 @@ import {
 
 export const incidentsRouter = Router();
 
-// incidentsRouter.post(
-//   "/",
-//   authMiddleware,
-//   requireRole("ADMIN"),
-//   validateBody(createIncidentSchema),
-//   createIncident,
-// );
+incidentsRouter.post(
+  "/",
+  authMiddleware,
+  requireRole("ADMIN"),
+  validateBody(createIncidentSchema),
+  createIncident,
+);
 
 incidentsRouter.get(
   "/",
@@ -41,20 +41,20 @@ incidentsRouter.get(
   getIncidentById,
 );
 
-// incidentsRouter.patch(
-//   "/:id",
-//   authMiddleware,
-//   requireRole("ADMIN"),
-//   validateParams(uuidParamSchema),
-//   validateBody(updateIncidentSchema),
-//   updateIncident,
-// );
+incidentsRouter.patch(
+  "/:id",
+  authMiddleware,
+  requireRole("ADMIN"),
+  validateParams(uuidParamSchema),
+  validateBody(updateIncidentSchema),
+  updateIncident,
+);
 
-// incidentsRouter.post(
-//   "/:id/link-report",
-//   authMiddleware,
-//   requireRole("ADMIN"),
-//   validateParams(uuidParamSchema),
-//   validateBody(linkReportSchema),
-//   linkReportToIncident,
-// );
+incidentsRouter.post(
+  "/:id/link-report",
+  authMiddleware,
+  requireRole("ADMIN"),
+  validateParams(uuidParamSchema),
+  validateBody(linkReportSchema),
+  linkReportToIncident,
+);
