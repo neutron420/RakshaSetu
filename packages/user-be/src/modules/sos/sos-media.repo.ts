@@ -16,7 +16,7 @@ export async function addMedia(data: {
       metadata: data.metadata ?? undefined,
     },
     select: {
-      id: true,
+      id : true,
       reportId: true,
       mediaType: true,
       url: true,
