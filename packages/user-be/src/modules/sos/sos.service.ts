@@ -1,4 +1,5 @@
 import { AppError } from "../../common/utils/app-error";
+import { emitSosCreated } from "../../ws/events";
 import { createSosReport, findByReporterAndClientReportId, listMyReports } from "./sos.repo";
 import type { CreateSosInput } from "./sos.schema";
 
@@ -19,6 +20,14 @@ export async function submitSos(reporterId: string, input: CreateSosInput) {
   if (!created) {
     throw new AppError("Failed to create SOS report", 500);
   }
+
+  emitSosCreated(reporterId, {
+    reportId: created.id,
+    category: input.category,
+    latitude: input.latitude,
+    longitude: input.longitude,
+    reportedAt: created.reportedAt,
+  });
 
   return {
     reportId: created.id,
