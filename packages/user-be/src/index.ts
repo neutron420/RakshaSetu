@@ -41,6 +41,13 @@ initWebSocket(httpServer);
 
 import { processOutbox } from "./modules/outbox/outbox.service";
 
+// Suppress KafkaJS internal TimeoutNegativeWarning (known bug in kafkajs)
+process.removeAllListeners("warning");
+process.on("warning", (warning) => {
+  if (warning.name === "TimeoutNegativeWarning") return;
+  console.warn(warning);
+});
+
 httpServer.listen(env.port, async () => {
   await connectProducer().catch((err: unknown) => {
     console.warn("[kafka] producer connect failed (events will still go to WebSocket):", err instanceof Error ? err.message : err);
@@ -48,12 +55,16 @@ httpServer.listen(env.port, async () => {
   console.log(`user-be running on port ${env.port}`);
 });
 
-// Start background worker for event outbox
-setInterval(() => {
-  void processOutbox().catch((err) => {
-    console.error("Error processing outbox:", err);
-  });
-}, 5000);
+// Delay first outbox poll to let DB pool warm up (avoids timeout on Neon cold start)
+setTimeout(() => {
+  setInterval(() => {
+    void processOutbox().catch((err) => {
+      const msg = err instanceof Error ? err.message : String(err);
+      if (msg.includes("Unable to start a transaction")) return; // Neon cold start, ignore
+      console.error("[outbox] error:", msg);
+    });
+  }, 5000);
+}, 10000);
 
 async function shutdown(signal: string) {
   console.log(`Received ${signal}. Shutting down...`);
