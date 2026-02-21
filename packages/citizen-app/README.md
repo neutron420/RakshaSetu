@@ -1,50 +1,108 @@
-# Welcome to your Expo app 👋
+# RakshaSetu — Citizen App
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Emergency disaster reporting & real-time incident tracking app built with **Expo SDK 54** + **React Native**.
 
-## Get started
+## Tech Stack
 
-1. Install dependencies
+| Layer | Tech |
+|-------|------|
+| Framework | Expo SDK 54, React Native 0.81 |
+| Navigation | Expo Router v6 (file-based) |
+| State | React Context + AsyncStorage |
+| Real-time | WebSocket (native) |
+| Maps | react-native-maps |
+| HTTP | fetch / axios |
+| Auth | JWT + OTP (phone-based) |
 
-   ```bash
-   npm install
-   ```
-
-2. Start the app
-
-   ```bash
-   npx expo start
-   ```
-
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
+## Setup
 
 ```bash
-npm run reset-project
+cd packages/citizen-app
+npm install
+npx expo start
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+> **⚠️ API URL:** In `config.ts`, set your **local machine IP** (run `ipconfig`), NOT `localhost` — mobile devices can't reach localhost on your PC.
 
-## Learn more
+## Backend API (user-be @ port 5001)
 
-To learn more about developing your project with Expo, look at the following resources:
+| Endpoint | Method | Auth | Description |
+|----------|--------|------|-------------|
+| `/auth/otp/request` | POST | ✗ | Send OTP to phone |
+| `/auth/otp/verify` | POST | ✗ | Verify OTP → JWT |
+| `/auth/signup` | POST | ✗ | Create account |
+| `/auth/login` | POST | ✗ | Email/password login |
+| `/users/me` | GET | ✓ | Get current user |
+| `/users/me` | PATCH | ✓ | Update profile |
+| `/sos` | POST | ✓ | Submit SOS report |
+| `/sos/my` | GET | ✓ | My SOS reports |
+| `/sos/upload-url` | GET | ✓ | Get presigned R2 URL |
+| `/sos/:id/media` | POST | ✓ | Attach media to report |
+| `/incidents` | GET | ✓ | List incidents |
+| `/incidents/:id` | GET | ✓ | Incident detail |
+| `/incidents/:id/timeline` | GET | ✓ | Status event history |
+| WebSocket `/ws` | — | — | Real-time alerts |
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+## Screens (13 total)
 
-## Join the community
+### Auth Flow
+1. **Welcome** — Onboarding splash
+2. **Phone OTP Login** — Enter phone → verify 6-digit OTP
+3. **Signup** — Name, email, password (first-time users)
 
-Join our community of developers creating universal apps.
+### Main Tabs
+4. **Home / Map** — Map with nearby incidents + SOS button
+5. **My Reports** — User's SOS report history
+6. **Alerts Feed** — Real-time incident alerts via WebSocket
+7. **Profile** — User info, edit, logout
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+### SOS Flow
+8. **SOS Report** — Category, description, auto-location
+9. **Media Upload** — Camera/gallery → R2 upload
+10. **Confirmation** — Report submitted with tracking ID
+
+### Detail Screens
+11. **Incident Detail** — Full incident info + map
+12. **Incident Timeline** — Status update history
+13. **Report Detail** — User's report with media
+
+## File Structure
+
+```
+app/
+├── _layout.tsx              # Root layout (auth guard)
+├── (auth)/
+│   ├── _layout.tsx
+│   ├── welcome.tsx          # Onboarding
+│   ├── phone-login.tsx      # OTP login
+│   └── signup.tsx           # Registration
+├── (tabs)/
+│   ├── _layout.tsx          # Tab bar
+│   ├── index.tsx            # Home/Map
+│   ├── my-reports.tsx       # Reports list
+│   ├── alerts.tsx           # Real-time feed
+│   └── profile.tsx          # User profile
+├── sos/
+│   ├── report.tsx           # SOS form
+│   ├── media.tsx            # Media upload
+│   └── confirmation.tsx     # Success screen
+├── incidents/
+│   ├── [id].tsx             # Incident detail
+│   └── [id]/timeline.tsx    # Timeline
+└── reports/
+    └── [id].tsx             # Report detail
+```
+
+## SOS Categories
+
+`FLOOD` · `FIRE` · `EARTHQUAKE` · `ACCIDENT` · `MEDICAL` · `VIOLENCE` · `LANDSLIDE` · `CYCLONE` · `OTHER`
+
+## Environment
+
+Backend environment is configured in `packages/user-be/.env`:
+- ✅ Database (Neon PostgreSQL)
+- ✅ JWT Auth
+- ✅ Kafka (Docker)
+- ✅ SMS (MSG91)
+- ✅ R2 Media Storage (Cloudflare bucket created)
+- ⏳ Push Notifications (Expo token needed)

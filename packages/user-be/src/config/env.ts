@@ -35,7 +35,9 @@ export const env = {
   r2SecretAccessKey: process.env.R2_SECRET_ACCESS_KEY ?? "mock_secret_key",
   r2BucketName: process.env.R2_BUCKET_NAME ?? "rakshasetu-media",
   r2PublicDomain: process.env.R2_PUBLIC_DOMAIN,
-  // Push & SMS
+  // Push & SMS (Twilio)
   expoAccessToken: process.env.EXPO_ACCESS_TOKEN,
-  smsProviderApiKey: process.env.SMS_PROVIDER_API_KEY,
+  twilioAccountSid: process.env.TWILIO_ACCOUNT_SID,
+  twilioAuthToken: process.env.TWILIO_AUTH_TOKEN,
+  twilioPhoneNumber: process.env.TWILIO_PHONE_NUMBER,
 };
