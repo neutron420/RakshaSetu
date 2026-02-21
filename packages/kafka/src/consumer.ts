@@ -5,10 +5,6 @@ import { TOPICS, type TopicName } from "./topics.js";
 let kafka: Kafka | null = null;
 let consumer: Consumer | null = null;
 
-/**
- * Create and return a consumer. Call connect() and subscribe() before use.
- * Use this from a separate process (e.g. notification worker, analytics).
- */
 export function createConsumer(groupId: string): Consumer {
   if (!kafka) {
     kafka = new Kafka({
@@ -20,7 +16,7 @@ export function createConsumer(groupId: string): Consumer {
   return consumer;
 }
 
-/** Run a consumer that processes each message with the given handler. */
+
 export async function runConsumer(
   groupId: string,
   topics: TopicName[],
@@ -35,14 +31,13 @@ export async function runConsumer(
         await eachMessage(payload);
       } catch (err) {
         console.error("[kafka] eachMessage error:", err);
-        // Don't throw: let Kafka commit offset. For at-least-once retry, throw.
+   
       }
     },
   });
   return c;
 }
 
-/** Disconnect the consumer (call on shutdown). */
 export async function disconnectConsumer(): Promise<void> {
   if (consumer) {
     await consumer.disconnect();
