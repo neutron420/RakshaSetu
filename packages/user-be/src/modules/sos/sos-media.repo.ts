@@ -31,7 +31,7 @@ export async function listMediaByReport(reportId: string) {
   return prisma.sosReportMedia.findMany({
     where: { reportId },
     select: {
-      id: true,
+      id : true,
       reportId: true,
       mediaType: true,
       url: true,
@@ -39,6 +39,6 @@ export async function listMediaByReport(reportId: string) {
       metadata: true,
       uploadedAt: true,
     },
-    orderBy: { uploadedAt: "asc" },
+    orderBy: { uploadedAt: "asc"},
   });
 }
