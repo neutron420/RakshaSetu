@@ -1,3 +1,4 @@
+import { sendOutboxMessage } from "@rakshasetu/kafka";
 import { broadcast } from "../../ws";
 import { claimPendingMessages, createOutboxMessage, markFailed, markPublished } from "./outbox.repo";
 
@@ -17,7 +18,7 @@ export async function enqueueEvent(data: {
 }
 
 /**
- * Claim pending outbox messages (with row lock) and dispatch via WebSocket.
+ * Claim pending outbox messages (with row lock), dispatch via WebSocket and Kafka.
  * Safe for multiple instances: each message is processed at most once.
  */
 export async function processOutbox(batchSize = 10) {
@@ -32,6 +33,15 @@ export async function processOutbox(batchSize = 10) {
           aggregateId: msg.aggregateId,
           data: msg.payload,
         },
+      });
+
+      await sendOutboxMessage({
+        id: msg.id,
+        eventType: msg.eventType,
+        aggregateType: msg.aggregateType,
+        aggregateId: msg.aggregateId,
+        partitionKey: msg.partitionKey,
+        payload: msg.payload,
       });
 
       await markPublished(msg.id);

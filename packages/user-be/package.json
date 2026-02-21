@@ -10,6 +10,7 @@
     "prisma:generate": "prisma generate --config ../../prisma.config.ts"
   },
   "dependencies": {
+    "@rakshasetu/kafka": "file:../kafka",
     "@aws-sdk/client-s3": "^3.993.0",
     "@aws-sdk/s3-request-presigner": "^3.993.0",
     "@prisma/adapter-pg": "^7.4.0",
