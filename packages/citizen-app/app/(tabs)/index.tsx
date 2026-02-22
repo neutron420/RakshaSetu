@@ -171,6 +171,21 @@ export default function HomeScreen() {
         </View>
       </View>
 
+      {/* Quick: Relief Centers Map */}
+      <Pressable
+        style={({ pressed }) => [styles.reliefCard, pressed && styles.reliefCardPressed]}
+        onPress={() => router.push('/(tabs)/explore')}
+      >
+        <View style={styles.reliefCardIcon}>
+          <Ionicons name="map" size={24} color="#1A73E8" />
+        </View>
+        <View style={styles.reliefCardText}>
+          <Text style={styles.reliefCardTitle}>Relief Centers</Text>
+          <Text style={styles.reliefCardSubtitle}>Shelters, hospitals & help nearby</Text>
+        </View>
+        <Ionicons name="chevron-forward" size={22} color="#9CABC2" />
+      </Pressable>
+
       {/* Section Title */}
       <View style={styles.sectionHeader}>
         <Ionicons name="pulse" size={20} color="#1A73E8" />
@@ -269,6 +284,46 @@ const styles = StyleSheet.create({
     backgroundColor: '#E8F2FF',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  reliefCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    marginHorizontal: 20,
+    marginTop: 16,
+    padding: 16,
+    borderRadius: 16,
+    shadowColor: '#1A73E8',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 3,
+    gap: 14,
+  },
+  reliefCardPressed: {
+    backgroundColor: '#F8FBFF',
+    transform: [{ scale: 0.99 }],
+  },
+  reliefCardIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 14,
+    backgroundColor: '#E8F2FF',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  reliefCardText: {
+    flex: 1,
+  },
+  reliefCardTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#1A2B4A',
+  },
+  reliefCardSubtitle: {
+    fontSize: 13,
+    color: '#7A8BA8',
+    marginTop: 2,
   },
   sectionHeader: {
     flexDirection: 'row',

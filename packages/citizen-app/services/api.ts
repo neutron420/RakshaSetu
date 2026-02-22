@@ -225,6 +225,44 @@ export function patchMeApi(body: {
   });
 }
 
+// ─── Relief Center Types ───────────────────────────
+export type ReliefCenterType = 'SHELTER' | 'HOSPITAL' | 'FOOD_CENTER' | 'OTHER';
+export type ReliefCenterStatus = 'OPEN' | 'FULL' | 'CLOSED' | 'INACTIVE';
+
+export type ReliefCenter = {
+  id: string;
+  name: string;
+  type: ReliefCenterType;
+  status: ReliefCenterStatus;
+  description: string | null;
+  address: string | null;
+  maxCapacity: number | null;
+  currentCount: number;
+  latitude: number;
+  longitude: number;
+  contactPhone: string | null;
+  distance?: number;
+};
+
+// ─── Relief Center API ──────────────────────────────
+
+export function getNearbyReliefCentersApi(params: {
+  latitude: number;
+  longitude: number;
+  radiusMeters?: number;
+}) {
+  const query = new URLSearchParams({
+    latitude: String(params.latitude),
+    longitude: String(params.longitude),
+    radiusMeters: String(params.radiusMeters ?? 5000),
+  });
+  return request<ReliefCenter[]>(`/relief-centers/nearby?${query.toString()}`);
+}
+
+export function getReliefCenterByIdApi(id: string) {
+  return request<ReliefCenter>(`/relief-centers/${id}`);
+}
+
 // ─── SOS Media Types ─────────────────────────────────
 
 export type MediaType = 'IMAGE' | 'VIDEO' | 'AUDIO' | 'DOCUMENT';

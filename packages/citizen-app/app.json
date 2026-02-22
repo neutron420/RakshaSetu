@@ -60,7 +60,8 @@
           "photosPermission": "RakshaSetu needs access to your photos to attach evidence to SOS reports.",
           "isAccessMediaLocationEnabled": true
         }
-      ]
+      ],
+      "@rnmapbox/maps"
     ],
     "experiments": {
       "typedRoutes": true,

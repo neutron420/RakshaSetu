@@ -1,0 +1,292 @@
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, Pressable, ActivityIndicator, Platform } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { StatusBar } from 'expo-status-bar';
+import MapView, { Marker } from 'react-native-maps';
+import * as Location from 'expo-location';
+import { getNearbyReliefCentersApi, ReliefCenter, ReliefCenterType, ReliefCenterStatus } from '../../services/api';
+import { socketService } from '../../services/socket';
+
+const TYPE_CONFIG: Record<ReliefCenterType, { icon: keyof typeof Ionicons.glyphMap; color: string; label: string }> = {
+  SHELTER: { icon: 'home', color: '#1A73E8', label: 'Shelter' },
+  HOSPITAL: { icon: 'medkit', color: '#E53935', label: 'Hospital' },
+  FOOD_CENTER: { icon: 'fast-food', color: '#FB8C00', label: 'Food' },
+  OTHER: { icon: 'help-circle', color: '#757575', label: 'Other' },
+};
+
+const DEFAULT_REGION = {
+  latitude: 28.6139,
+  longitude: 77.2090,
+  latitudeDelta: 0.05,
+  longitudeDelta: 0.05,
+};
+
+export default function ExploreScreen() {
+  const [region, setRegion] = useState(DEFAULT_REGION);
+  const [userCoord, setUserCoord] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [centers, setCenters] = useState<ReliefCenter[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedCenter, setSelectedCenter] = useState<ReliefCenter | null>(null);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== 'granted') {
+          setLoading(false);
+          return;
+        }
+
+        const loc = await Location.getCurrentPositionAsync({});
+        const lat = loc.coords.latitude;
+        const lng = loc.coords.longitude;
+        setUserCoord({ latitude: lat, longitude: lng });
+        setRegion({
+          latitude: lat,
+          longitude: lng,
+          latitudeDelta: 0.05,
+          longitudeDelta: 0.05,
+        });
+        fetchCenters(lat, lng);
+      } catch (err) {
+        console.error('Location error:', err);
+      } finally {
+        setLoading(false);
+      }
+    })();
+
+    const unsubscribe = socketService.on('relief-center:update', (payload: { id: string; status?: ReliefCenterStatus; currentCount?: number }) => {
+      setCenters(prev => prev.map(c => c.id === payload.id ? { ...c, status: payload.status ?? c.status, currentCount: payload.currentCount ?? c.currentCount } as ReliefCenter : c));
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  async function fetchCenters(lat: number, lng: number) {
+    try {
+      const res = await getNearbyReliefCentersApi({ latitude: lat, longitude: lng, radiusMeters: 10000 });
+      setCenters(res.data || []);
+    } catch (err) {
+      console.error('Fetch centers error:', err);
+      setCenters([]);
+    }
+  }
+
+  if (loading) {
+    return (
+      <View style={styles.center}>
+        <ActivityIndicator size="large" color="#1A73E8" />
+      </View>
+    );
+  }
+
+  return (
+    <View style={styles.container}>
+      <StatusBar style="dark" />
+
+      <MapView
+        style={styles.map}
+        region={region}
+        onRegionChangeComplete={setRegion}
+        showsUserLocation
+        showsMyLocationButton
+      >
+        {/* Relief center markers */}
+        {centers.map(center => {
+          const config = TYPE_CONFIG[center.type] || TYPE_CONFIG.OTHER;
+          return (
+            <Marker
+              key={center.id}
+              coordinate={{ latitude: center.latitude, longitude: center.longitude }}
+              onPress={() => setSelectedCenter(center)}
+              pinColor={config.color}
+            >
+              <View style={[styles.marker, { backgroundColor: config.color }]}>
+                <Ionicons name={config.icon} size={16} color="#fff" />
+              </View>
+            </Marker>
+          );
+        })}
+      </MapView>
+
+      {/* Detail Overlay */}
+      {selectedCenter && (
+        <View style={styles.detailCard}>
+          <View style={styles.detailHeader}>
+            <View style={[styles.typeBadge, { backgroundColor: (TYPE_CONFIG[selectedCenter.type] || TYPE_CONFIG.OTHER).color + '15' }]}>
+              <Ionicons name={(TYPE_CONFIG[selectedCenter.type] || TYPE_CONFIG.OTHER).icon} size={16} color={(TYPE_CONFIG[selectedCenter.type] || TYPE_CONFIG.OTHER).color} />
+              <Text style={[styles.typeText, { color: (TYPE_CONFIG[selectedCenter.type] || TYPE_CONFIG.OTHER).color }]}>
+                {(TYPE_CONFIG[selectedCenter.type] || TYPE_CONFIG.OTHER).label}
+              </Text>
+            </View>
+            <Pressable onPress={() => setSelectedCenter(null)}>
+              <Ionicons name="close" size={24} color="#9CABC2" />
+            </Pressable>
+          </View>
+
+          <Text style={styles.centerName}>{selectedCenter.name}</Text>
+          <Text style={styles.centerAddress}>{selectedCenter.address || 'Location provided on map'}</Text>
+
+          <View style={styles.statusRow}>
+            <View style={[styles.statusBadge, { backgroundColor: selectedCenter.status === 'OPEN' ? '#E8F5E9' : '#FFEBEE' }]}>
+              <Text style={[styles.statusText, { color: selectedCenter.status === 'OPEN' ? '#43A047' : '#D32F2F' }]}>
+                {selectedCenter.status}
+              </Text>
+            </View>
+            {selectedCenter.maxCapacity != null && (
+              <Text style={styles.occupancyText}>
+                {selectedCenter.currentCount ?? 0} / {selectedCenter.maxCapacity} Occupied
+              </Text>
+            )}
+          </View>
+
+          <Pressable style={styles.directionsBtn}>
+            <Ionicons name="navigate" size={18} color="#fff" />
+            <Text style={styles.directionsBtnText}>Get Directions</Text>
+          </Pressable>
+        </View>
+      )}
+
+      {/* Floating Header */}
+      <View style={styles.floatingHeader}>
+        <Text style={styles.headerTitle}>Relief Centers</Text>
+        <Text style={styles.headerSubtitle}>Nearby shelters & help</Text>
+      </View>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#fff',
+  },
+  map: {
+    flex: 1,
+    width: '100%',
+    ...(Platform.OS === 'android' && { minHeight: 400 }),
+  },
+  center: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  marker: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: '#fff',
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+  },
+  floatingHeader: {
+    position: 'absolute',
+    top: 50,
+    left: 20,
+    right: 20,
+    backgroundColor: 'rgba(255,255,255,0.95)',
+    padding: 16,
+    borderRadius: 20,
+    elevation: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#1A2B4A',
+  },
+  headerSubtitle: {
+    fontSize: 13,
+    color: '#7A8BA8',
+    fontWeight: '500',
+    marginTop: 2,
+  },
+  detailCard: {
+    position: 'absolute',
+    bottom: 30,
+    left: 20,
+    right: 20,
+    backgroundColor: '#fff',
+    borderRadius: 24,
+    padding: 20,
+    elevation: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.2,
+    shadowRadius: 20,
+  },
+  detailHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  typeBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 10,
+    gap: 6,
+  },
+  typeText: {
+    fontSize: 12,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+  },
+  centerName: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#1A2B4A',
+    marginBottom: 4,
+  },
+  centerAddress: {
+    fontSize: 14,
+    color: '#7A8BA8',
+    marginBottom: 16,
+    lineHeight: 20,
+  },
+  statusRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 20,
+  },
+  statusBadge: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  statusText: {
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  occupancyText: {
+    fontSize: 13,
+    color: '#5A7A9A',
+    fontWeight: '600',
+  },
+  directionsBtn: {
+    backgroundColor: '#1A73E8',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 14,
+    borderRadius: 16,
+    gap: 8,
+  },
+  directionsBtnText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '700',
+  },
+});

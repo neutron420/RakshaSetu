@@ -78,6 +78,20 @@ enum EventPublishStatus {
   FAILED
 }
 
+enum ReliefCenterType {
+  SHELTER
+  HOSPITAL
+  FOOD_CENTER
+  OTHER
+}
+
+enum ReliefCenterStatus {
+  OPEN
+  FULL
+  CLOSED
+  INACTIVE
+}
+
 model User {
   id                  String                                 @id @default(uuid()) @db.Uuid
   email               String?                                @unique @db.VarChar(255)
@@ -280,4 +294,31 @@ model EventOutboxMessage {
   @@index([publishStatus, availableAt], map: "idx_outbox_dispatch")
   @@index([aggregateType, aggregateId], map: "idx_outbox_aggregate")
   @@index([createdAt], map: "idx_outbox_created")
+}
+
+model ReliefCenter {
+  id          String             @id @default(uuid()) @db.Uuid
+  name        String             @db.VarChar(180)
+  type        ReliefCenterType   @default(SHELTER)
+  status      ReliefCenterStatus @default(OPEN)
+  description String?            @db.Text
+  address     String?            @db.Text
+
+  // Capacity and Occupancy
+  maxCapacity  Int?
+  currentCount Int  @default(0)
+
+  // Location
+  latitude    Decimal                               @db.Decimal(9, 6)
+  longitude   Decimal                               @db.Decimal(9, 6)
+  locationGeo Unsupported("geography(Point, 4326)")
+
+  contactPhone String? @db.VarChar(20)
+  isActive     Boolean @default(true)
+
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @db.Timestamptz(6)
+
+  @@index([type], map: "idx_relief_center_type")
+  @@index([status], map: "idx_relief_center_status")
 }

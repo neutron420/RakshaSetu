@@ -80,6 +80,16 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="explore"
+        options={{
+          title: 'Relief Centers',
+          href: null, // Hidden from tab bar; open from Home "Relief Centers" card
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons name={focused ? 'map' : 'map-outline'} size={24} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="my-reports"
         options={{
           title: 'My Reports',
