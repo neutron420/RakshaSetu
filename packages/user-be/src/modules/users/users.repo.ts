@@ -6,12 +6,29 @@ export async function findUserById(id: string) {
 }
 
 export async function updateUserById(id: string, input: UpdateMeInput) {
-  return prisma.user.update({
-    where: { id },
-    data: {
-      fullName: input.fullName,
-      phone: input.phone === null ? null : input.phone,
-      pushToken: input.pushToken,
-    },
-  });
+  const { fullName, phone, pushToken, latitude, longitude } = input;
+
+  const rows = await prisma.$queryRaw<any[]>`
+    UPDATE "User"
+    SET
+      "fullName" = COALESCE(${fullName ?? null}, "fullName"),
+      "phone"    = CASE 
+                     WHEN ${phone === null} THEN NULL 
+                     WHEN ${phone !== undefined} THEN ${phone} 
+                     ELSE "phone" 
+                   END,
+      "pushToken" = COALESCE(${pushToken ?? null}, "pushToken"),
+      "lastLat"   = COALESCE(${latitude ?? null}, "lastLat"),
+      "lastLng"   = COALESCE(${longitude ?? null}, "lastLng"),
+      "lastLocationGeo" = CASE
+                            WHEN ${latitude !== undefined && longitude !== undefined} 
+                            THEN ST_SetSRID(ST_MakePoint(${longitude}, ${latitude}), 4326)::geography
+                            ELSE "lastLocationGeo"
+                          END,
+      "updatedAt" = NOW()
+    WHERE "id" = ${id}::uuid
+    RETURNING *
+  `;
+
+  return rows[0];
 }

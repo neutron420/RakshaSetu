@@ -39,7 +39,28 @@
           }
         }
       ],
-      "expo-secure-store"
+      "expo-secure-store",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/icon.png",
+          "color": "#1A73E8"
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "RakshaSetu needs access to your photos to attach evidence to SOS reports.",
+          "cameraPermission": "RakshaSetu needs access to your camera to capture emergency evidence."
+        }
+      ],
+      [
+        "expo-media-library",
+        {
+          "photosPermission": "RakshaSetu needs access to your photos to attach evidence to SOS reports.",
+          "isAccessMediaLocationEnabled": true
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

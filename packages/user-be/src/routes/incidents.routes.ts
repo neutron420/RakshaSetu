@@ -16,6 +16,12 @@ import {
   updateIncidentSchema,
   uuidParamSchema,
 } from "../modules/incidents/incidents.schema";
+import {
+  toggleUpvote,
+  getUpvotes,
+  batchGetUpvotes,
+  getMedia,
+} from "../modules/incidents/upvotes.controller";
 
 export const incidentsRouter = Router();
 
@@ -32,6 +38,13 @@ incidentsRouter.get(
   authMiddleware,
   validateQuery(listIncidentsQuerySchema),
   listIncidents,
+);
+
+// Batch upvotes — must be before /:id routes
+incidentsRouter.post(
+  "/upvotes/batch",
+  authMiddleware,
+  batchGetUpvotes,
 );
 
 incidentsRouter.get(
@@ -57,4 +70,26 @@ incidentsRouter.post(
   validateParams(uuidParamSchema),
   validateBody(linkReportSchema),
   linkReportToIncident,
+);
+
+// Upvote routes
+incidentsRouter.post(
+  "/:id/upvote",
+  authMiddleware,
+  validateParams(uuidParamSchema),
+  toggleUpvote,
+);
+
+incidentsRouter.get(
+  "/:id/upvotes",
+  authMiddleware,
+  validateParams(uuidParamSchema),
+  getUpvotes,
+);
+
+incidentsRouter.get(
+  "/:id/media",
+  authMiddleware,
+  validateParams(uuidParamSchema),
+  getMedia,
 );

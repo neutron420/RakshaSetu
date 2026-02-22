@@ -40,9 +40,12 @@ export async function getUploadUrl(key: string, contentType: string, expiresInSe
  * @param key The file key
  */
 export function getPublicUrl(key: string) {
-  // Assuming the bucket is public or behind a custom domain
-  // result: https://<custom-domain>/<key> or https://<bucket>.<account>.r2.cloudflarestorage.com/<key>
-  // Ideally, use a custom domain environment variable if available
-  const baseUrl = env.r2PublicDomain || env.r2Endpoint.replace("https://", `https://${env.r2BucketName}.`); 
+  if (!key) return "";
+  if (key.startsWith("http")) return key; // Already a full URL
+
+  const baseUrl = env.r2PublicDomain
+    ? env.r2PublicDomain.replace(/\/$/, "") // Remove trailing slash if any
+    : env.r2Endpoint.replace("https://", `https://${env.r2BucketName}.`);
+
   return `${baseUrl}/${key}`;
 }

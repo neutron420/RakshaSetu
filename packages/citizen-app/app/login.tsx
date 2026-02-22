@@ -14,7 +14,7 @@ import { useRouter, RelativePathString } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { loginApi } from '../services/api';
-import { saveToken, saveUser } from '../services/auth-store';
+import { saveToken, saveUser, saveSession } from '../services/auth-store';
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -22,6 +22,7 @@ export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -36,6 +37,7 @@ export default function LoginScreen() {
       const res = await loginApi({ email: email.trim(), password });
       await saveToken(res.data.accessToken);
       await saveUser(res.data.user);
+      await saveSession(rememberMe);
       router.replace('/(tabs)' as RelativePathString);
     } catch (err: any) {
       setError(err.message || 'Login failed');
@@ -101,6 +103,19 @@ export default function LoginScreen() {
               />
             </Pressable>
           </View>
+
+          {/* Remember Me */}
+          <Pressable
+            style={styles.rememberRow}
+            onPress={() => setRememberMe(!rememberMe)}
+          >
+            <View style={[styles.checkbox, rememberMe && styles.checkboxActive]}>
+              {rememberMe && (
+                <Ionicons name="checkmark" size={14} color="#fff" />
+              )}
+            </View>
+            <Text style={styles.rememberText}>Login for 30 days</Text>
+          </Pressable>
 
           {/* Login Button */}
           <Pressable
@@ -232,6 +247,31 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     gap: 8,
     marginTop: 4,
+  },
+  rememberRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingVertical: 2,
+  },
+  checkbox: {
+    width: 22,
+    height: 22,
+    borderRadius: 6,
+    borderWidth: 2,
+    borderColor: '#C8D6E5',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#fff',
+  },
+  checkboxActive: {
+    backgroundColor: '#1A73E8',
+    borderColor: '#1A73E8',
+  },
+  rememberText: {
+    fontSize: 14,
+    color: '#5A6F8A',
+    fontWeight: '500',
   },
   errorText: {
     color: '#D32F2F',

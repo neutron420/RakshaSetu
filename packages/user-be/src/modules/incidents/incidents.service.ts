@@ -2,6 +2,7 @@ import { AppError } from "../../common/utils/app-error";
 import { emitIncidentUpdate } from "../../ws/events";
 import { enqueueEvent } from "../outbox/outbox.service";
 import { logStatusChange } from "../timeline/timeline.service";
+import { getPublicUrl } from "../../common/services/storage.service";
 import {
   countIncidents,
   createIncident as repoCreate,
@@ -23,12 +24,27 @@ export async function create(input: CreateIncidentInput) {
     throw new AppError("Failed to create incident", 500);
   }
 
-  await enqueueEvent({
-    aggregateType: "Incident",
-    aggregateId: incident.id,
-    eventType: "IncidentCreated",
-    partitionKey: incident.id,
-    payload: incident,
+  try {
+    await enqueueEvent({
+      aggregateType: "Incident",
+      aggregateId: incident.id,
+      eventType: "IncidentCreated",
+      partitionKey: incident.id,
+      payload: incident,
+    });
+  } catch (err: any) {
+    console.warn(`[incidents:service] Failed to enqueue IncidentCreated event: ${err.message}`);
+  }
+
+
+  emitIncidentUpdate({
+    incidentId: incident.id,
+    status: incident.status,
+    priority: incident.priority,
+    title: incident.title,
+    category: incident.category,
+    centroidLat: incident.centroidLat,
+    centroidLng: incident.centroidLng,
   });
 
   return incident;
@@ -39,7 +55,10 @@ export async function getById(id: string) {
   if (!incident) {
     throw new AppError("Incident not found", 404);
   }
-  return incident;
+  return {
+    ...incident,
+    representativeMediaUrl: incident.representativeMediaUrl ? getPublicUrl(incident.representativeMediaUrl) : null
+  };
 }
 
 export async function list(query: ListIncidentsQuery) {
@@ -49,7 +68,10 @@ export async function list(query: ListIncidentsQuery) {
   ]);
 
   return {
-    data,
+    data: data.map(item => ({
+      ...item,
+      representativeMediaUrl: item.representativeMediaUrl ? getPublicUrl(item.representativeMediaUrl) : null
+    })),
     meta: { page: query.page, limit: query.limit, total },
   };
 }
@@ -107,6 +129,22 @@ export async function linkReport(incidentId: string, input: LinkReportInput) {
   }
 
   await linkReportToIncident(incidentId, input.reportId);
+
+  // Fetch updated incident to get fresh reportCount/status
+  const updated = await findIncidentById(incidentId);
+
+  // Emit refresh event for the community feed
+  if (updated) {
+    emitIncidentUpdate({
+      incidentId: updated.id,
+      status: updated.status,
+      priority: updated.priority,
+      title: updated.title,
+      category: updated.category,
+      centroidLat: updated.centroidLat,
+      centroidLng: updated.centroidLng,
+    });
+  }
 
   return { incidentId, reportId: input.reportId, linked: true };
 }
