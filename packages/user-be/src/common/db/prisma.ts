@@ -6,7 +6,6 @@ import { env } from "../../config/env";
 const globalForPrisma = globalThis as unknown as { __prisma?: PrismaClient };
 
 function createPrismaClient(): PrismaClient {
-  // Append uselibpqcompat to silence pg-connection-string SSL deprecation warning
   const connStr = env.databaseUrl.includes("uselibpqcompat")
     ? env.databaseUrl
     : `${env.databaseUrl}&uselibpqcompat=true`;

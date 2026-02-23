@@ -16,14 +16,12 @@ function getProducer(): Producer {
   return producer;
 }
 
-/** Call once at app startup (e.g. before processing outbox). */
 export async function connectProducer(): Promise<void> {
   if (!kafkaConfig.enabled) return;
   const p = getProducer();
   await p.connect();
 }
 
-/** Call on app shutdown. */
 export async function disconnectProducer(): Promise<void> {
   if (producer) {
     await producer.disconnect();
@@ -41,10 +39,6 @@ export interface OutboxMessage {
   payload: unknown;
 }
 
-/**
- * Send a single outbox message to the correct Kafka topic.
- * No-op if KAFKA_ENABLED is false or eventType has no topic mapping.
- */
 export async function sendOutboxMessage(msg: OutboxMessage): Promise<boolean> {
   if (!kafkaConfig.enabled) return false;
 
@@ -71,9 +65,6 @@ export async function sendOutboxMessage(msg: OutboxMessage): Promise<boolean> {
   return true;
 }
 
-/**
- * Send a raw message to a topic (for use outside outbox).
- */
 export async function send(topic: string, key: string, value: string | object): Promise<void> {
   if (!kafkaConfig.enabled) return;
 

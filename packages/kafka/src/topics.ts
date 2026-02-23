@@ -1,7 +1,3 @@
-/**
- * Topic names and mapping from outbox eventType → topic.
- * Single source of truth for producers and consumers.
- */
 export const TOPICS = {
   SOS_REPORTED: "rakshasetu.sos.reported",
   INCIDENTS_CREATED: "rakshasetu.incidents.created",
@@ -12,7 +8,6 @@ export const TOPICS = {
 
 export type TopicName = (typeof TOPICS)[keyof typeof TOPICS];
 
-/** Map outbox eventType to Kafka topic. Returns null if event should not be published to Kafka. */
 export function getTopicForEventType(eventType: string): string | null {
   switch (eventType) {
     case "IncidentCreated":
