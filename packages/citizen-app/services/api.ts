@@ -193,6 +193,20 @@ export function getIncidentByIdApi(id: string) {
   return request<Incident>(`/incidents/${id}`);
 }
 
+export function getNearbyIncidentsApi(params: {
+  latitude: number;
+  longitude: number;
+  radiusMeters?: number;
+}) {
+  const query = new URLSearchParams({
+    latitude: String(params.latitude),
+    longitude: String(params.longitude),
+    radiusMeters: String(params.radiusMeters ?? 20000),
+  });
+  return request<Incident[]>(`/incidents/nearby?${query.toString()}`);
+}
+
+
 export function getIncidentMediaApi(id: string) {
   return request<IncidentMedia[]>(`/incidents/${id}/media`);
 }
@@ -254,7 +268,7 @@ export function getNearbyReliefCentersApi(params: {
   const query = new URLSearchParams({
     latitude: String(params.latitude),
     longitude: String(params.longitude),
-    radiusMeters: String(params.radiusMeters ?? 5000),
+    radiusMeters: String(params.radiusMeters ?? 20000),
   });
   return request<ReliefCenter[]>(`/relief-centers/nearby?${query.toString()}`);
 }

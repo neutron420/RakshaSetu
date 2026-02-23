@@ -4,7 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import MapView, { Marker } from 'react-native-maps';
 import * as Location from 'expo-location';
-import { getNearbyReliefCentersApi, ReliefCenter, ReliefCenterType, ReliefCenterStatus } from '../../services/api';
+import { getNearbyReliefCentersApi, ReliefCenter, ReliefCenterType, ReliefCenterStatus, Incident, getNearbyIncidentsApi } from '../../services/api';
 import { socketService } from '../../services/socket';
 
 const TYPE_CONFIG: Record<ReliefCenterType, { icon: keyof typeof Ionicons.glyphMap; color: string; label: string }> = {
@@ -25,8 +25,10 @@ export default function ExploreScreen() {
   const [region, setRegion] = useState(DEFAULT_REGION);
   const [userCoord, setUserCoord] = useState<{ latitude: number; longitude: number } | null>(null);
   const [centers, setCenters] = useState<ReliefCenter[]>([]);
+  const [incidents, setIncidents] = useState<Incident[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedCenter, setSelectedCenter] = useState<ReliefCenter | null>(null);
+  const [selectedIncident, setSelectedIncident] = useState<Incident | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -47,7 +49,7 @@ export default function ExploreScreen() {
           latitudeDelta: 0.05,
           longitudeDelta: 0.05,
         });
-        fetchCenters(lat, lng);
+        fetchData(lat, lng);
       } catch (err) {
         console.error('Location error:', err);
       } finally {
@@ -62,13 +64,18 @@ export default function ExploreScreen() {
     return () => unsubscribe();
   }, []);
 
-  async function fetchCenters(lat: number, lng: number) {
+  async function fetchData(lat: number, lng: number) {
     try {
-      const res = await getNearbyReliefCentersApi({ latitude: lat, longitude: lng, radiusMeters: 10000 });
-      setCenters(res.data || []);
+      const [resCenters, resIncidents] = await Promise.all([
+        getNearbyReliefCentersApi({ latitude: lat, longitude: lng, radiusMeters: 20000 }),
+        getNearbyIncidentsApi({ latitude: lat, longitude: lng, radiusMeters: 20000 })
+      ]);
+      setCenters(resCenters.data || []);
+      setIncidents(resIncidents.data || []);
     } catch (err) {
-      console.error('Fetch centers error:', err);
+      console.error('Fetch data error:', err);
       setCenters([]);
+      setIncidents([]);
     }
   }
 
@@ -98,11 +105,33 @@ export default function ExploreScreen() {
             <Marker
               key={center.id}
               coordinate={{ latitude: center.latitude, longitude: center.longitude }}
-              onPress={() => setSelectedCenter(center)}
+              onPress={() => {
+                setSelectedIncident(null);
+                setSelectedCenter(center);
+              }}
               pinColor={config.color}
             >
               <View style={[styles.marker, { backgroundColor: config.color }]}>
                 <Ionicons name={config.icon} size={16} color="#fff" />
+              </View>
+            </Marker>
+          );
+        })}
+
+        {/* Incident markers */}
+        {incidents.map(incident => {
+          return (
+            <Marker
+              key={incident.id}
+              coordinate={{ latitude: incident.centroidLat, longitude: incident.centroidLng }}
+              onPress={() => {
+                setSelectedCenter(null);
+                setSelectedIncident(incident);
+              }}
+              pinColor="#ce1515"
+            >
+              <View style={[styles.marker, { backgroundColor: '#ce1515' }]}>
+                <Ionicons name="warning" size={16} color="#fff" />
               </View>
             </Marker>
           );
@@ -143,6 +172,43 @@ export default function ExploreScreen() {
           <Pressable style={styles.directionsBtn}>
             <Ionicons name="navigate" size={18} color="#fff" />
             <Text style={styles.directionsBtnText}>Get Directions</Text>
+          </Pressable>
+        </View>
+      )}
+
+      {selectedIncident && (
+        <View style={styles.detailCard}>
+          <View style={styles.detailHeader}>
+            <View style={[styles.typeBadge, { backgroundColor: '#FFEBEE' }]}>
+              <Ionicons name="warning" size={16} color="#ce1515" />
+              <Text style={[styles.typeText, { color: '#ce1515' }]}>
+                {selectedIncident.category}
+              </Text>
+            </View>
+            <Pressable onPress={() => setSelectedIncident(null)}>
+              <Ionicons name="close" size={24} color="#9CABC2" />
+            </Pressable>
+          </View>
+
+          <Text style={styles.centerName}>{selectedIncident.title}</Text>
+          <Text style={styles.centerAddress} numberOfLines={2}>
+            {selectedIncident.description || 'No description available'}
+          </Text>
+
+          <View style={styles.statusRow}>
+            <View style={[styles.statusBadge, { backgroundColor: selectedIncident.status === 'OPEN' ? '#FFEBEE' : '#FFF3E0' }]}>
+              <Text style={[styles.statusText, { color: selectedIncident.status === 'OPEN' ? '#ce1515' : '#E65100' }]}>
+                {selectedIncident.status}
+              </Text>
+            </View>
+            <Text style={styles.occupancyText}>
+              {selectedIncident.reportCount} Reports
+            </Text>
+          </View>
+
+          <Pressable style={[styles.directionsBtn, { backgroundColor: '#ce1515' }]}>
+            <Ionicons name="eye" size={18} color="#fff" />
+            <Text style={styles.directionsBtnText}>View Updates</Text>
           </Pressable>
         </View>
       )}

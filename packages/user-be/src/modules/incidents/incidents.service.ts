@@ -9,12 +9,14 @@ import {
   findIncidentById,
   linkReportToIncident,
   listIncidents as repoList,
+  listNearbyIncidents as repoListNearby,
   updateIncident as repoUpdate,
 } from "./incidents.repo";
 import type {
   CreateIncidentInput,
   LinkReportInput,
   ListIncidentsQuery,
+  ListNearbyQuery,
   UpdateIncidentInput,
 } from "./incidents.schema";
 
@@ -75,6 +77,18 @@ export async function list(query: ListIncidentsQuery) {
     meta: { page: query.page, limit: query.limit, total },
   };
 }
+
+export async function listNearby(query: ListNearbyQuery) {
+  const data = await repoListNearby(query);
+
+  return {
+    data: data.map(item => ({
+      ...item,
+      representativeMediaUrl: item.representativeMediaUrl ? getPublicUrl(item.representativeMediaUrl) : null
+    })),
+  };
+}
+
 
 export async function update(id: string, input: UpdateIncidentInput, actorId: string) {
   const existing = await findIncidentById(id);

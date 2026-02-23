@@ -21,6 +21,13 @@ export async function listIncidents(req: Request, res: Response) {
   return paginated(res, "Incidents fetched", result.data, result.meta);
 }
 
+export async function listNearbyIncidents(req: Request, res: Response) {
+  requireAuth(req);
+  const result = await service.listNearby(req.query as any);
+  return ok(res, "Nearby incidents fetched", result.data);
+}
+
+
 export async function updateIncident(req: Request, res: Response) {
   const user = requireAuth(req);
   const data = await service.update(req.params.id as string, req.body, user.id);
