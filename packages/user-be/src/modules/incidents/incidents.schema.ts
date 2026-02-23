@@ -40,6 +40,15 @@ export const linkReportSchema = z.object({
   reportId: z.string().uuid(),
 });
 
+export const listNearbyQuerySchema = z.object({
+  latitude: z.coerce.number().min(-90).max(90),
+  longitude: z.coerce.number().min(-180).max(180),
+  radiusMeters: z.coerce.number().int().min(100).max(100000).optional().default(20000),
+  category: sosCategoryEnum.optional(),
+  status: incidentStatusEnum.optional(),
+});
+
+
 export const uuidParamSchema = z.object({
   id: z.string().uuid(),
 });
@@ -47,4 +56,6 @@ export const uuidParamSchema = z.object({
 export type CreateIncidentInput = z.infer<typeof createIncidentSchema>;
 export type UpdateIncidentInput = z.infer<typeof updateIncidentSchema>;
 export type ListIncidentsQuery = z.infer<typeof listIncidentsQuerySchema>;
+export type ListNearbyQuery = z.infer<typeof listNearbyQuerySchema>;
 export type LinkReportInput = z.infer<typeof linkReportSchema>;
+

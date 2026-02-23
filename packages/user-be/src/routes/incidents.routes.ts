@@ -7,12 +7,14 @@ import {
   getIncidentById,
   linkReportToIncident,
   listIncidents,
+  listNearbyIncidents,
   updateIncident,
 } from "../modules/incidents/incidents.controller";
 import {
   createIncidentSchema,
   linkReportSchema,
   listIncidentsQuerySchema,
+  listNearbyQuerySchema,
   updateIncidentSchema,
   uuidParamSchema,
 } from "../modules/incidents/incidents.schema";
@@ -39,6 +41,14 @@ incidentsRouter.get(
   validateQuery(listIncidentsQuerySchema),
   listIncidents,
 );
+
+incidentsRouter.get(
+  "/nearby",
+  authMiddleware,
+  validateQuery(listNearbyQuerySchema),
+  listNearbyIncidents,
+);
+
 
 // Batch upvotes — must be before /:id routes
 incidentsRouter.post(

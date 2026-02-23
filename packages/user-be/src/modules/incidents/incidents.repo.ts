@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { prisma } from "../../common/db/prisma";
-import type { CreateIncidentInput, ListIncidentsQuery, UpdateIncidentInput } from "./incidents.schema";
+import type { CreateIncidentInput, ListIncidentsQuery, UpdateIncidentInput, ListNearbyQuery } from "./incidents.schema";
 
 // ── Row types ────────────────────────────────────────────────────────
 
@@ -161,6 +161,43 @@ export async function findNearbyIncident(params: {
   `;
 
   return rows[0] ?? null;
+}
+
+export async function listNearbyIncidents(query: ListNearbyQuery) {
+  const rows = await prisma.$queryRaw<IncidentRow[]>`
+    SELECT
+      "id"::text AS "id",
+      "category"::text AS "category",
+      "status"::text AS "status",
+      "priority"::text AS "priority",
+      "title", "description",
+      "reportCount" AS "reportCount",
+      "confidenceScore"::float8 AS "confidenceScore",
+      "clusterRadiusMeters" AS "clusterRadiusMeters",
+      "centroidLat"::float8 AS "centroidLat",
+      "centroidLng"::float8 AS "centroidLng",
+      "firstReportedAt" AS "firstReportedAt",
+      "lastReportedAt" AS "lastReportedAt",
+      "resolvedAt" AS "resolvedAt",
+      "createdAt" AS "createdAt",
+      "updatedAt" AS "updatedAt"
+    FROM "Incident"
+    WHERE
+      (${query.status ?? null}::text IS NULL OR "status" = ${query.status ?? null}::"IncidentStatus")
+      AND (${query.category ?? null}::text IS NULL OR "category" = ${query.category ?? null}::"SosCategory")
+      AND ST_DWithin(
+        "centroidGeo",
+        ST_SetSRID(ST_MakePoint(${query.longitude}, ${query.latitude}), 4326)::geography,
+        ${query.radiusMeters}
+      )
+    ORDER BY ST_Distance(
+      "centroidGeo",
+      ST_SetSRID(ST_MakePoint(${query.longitude}, ${query.latitude}), 4326)::geography
+    ) ASC
+    LIMIT 100
+  `;
+
+  return rows;
 }
 
 // ── List with filters + pagination ───────────────────────────────────
