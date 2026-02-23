@@ -130,31 +130,40 @@ export async function findNearbyIncident(params: {
 }) {
   const rows = await prisma.$queryRaw<IncidentRow[]>`
     SELECT
-      "id"::text AS "id",
-      "category"::text AS "category",
-      "status"::text AS "status",
-      "priority"::text AS "priority",
-      "title", "description",
-      "reportCount" AS "reportCount",
-      "confidenceScore"::float8 AS "confidenceScore",
-      "clusterRadiusMeters" AS "clusterRadiusMeters",
-      "centroidLat"::float8 AS "centroidLat",
-      "centroidLng"::float8 AS "centroidLng",
-      "firstReportedAt" AS "firstReportedAt",
-      "lastReportedAt" AS "lastReportedAt",
-      "resolvedAt" AS "resolvedAt",
-      "createdAt" AS "createdAt",
-      "updatedAt" AS "updatedAt"
-    FROM "Incident"
-    WHERE "status" NOT IN ('RESOLVED', 'CLOSED')
-      AND "category" = ${params.category}::"SosCategory"
+      i."id"::text AS "id",
+      i."category"::text AS "category",
+      i."status"::text AS "status",
+      i."priority"::text AS "priority",
+      i."title", i."description",
+      i."reportCount" AS "reportCount",
+      i."confidenceScore"::float8 AS "confidenceScore",
+      i."clusterRadiusMeters" AS "clusterRadiusMeters",
+      i."centroidLat"::float8 AS "centroidLat",
+      i."centroidLng"::float8 AS "centroidLng",
+      i."firstReportedAt" AS "firstReportedAt",
+      i."lastReportedAt" AS "lastReportedAt",
+      i."resolvedAt" AS "resolvedAt",
+      i."createdAt" AS "createdAt",
+      i."updatedAt" AS "updatedAt",
+      m."url" AS "representativeMediaUrl"
+    FROM "Incident" i
+    LEFT JOIN LATERAL (
+      SELECT "url"
+      FROM "SosReportMedia" sm
+      JOIN "SosReport" sr ON sr."id" = sm."reportId"
+      WHERE sr."incidentId" = i."id"
+      ORDER BY sm."uploadedAt" DESC
+      LIMIT 1
+    ) m ON true
+    WHERE i."status" NOT IN ('RESOLVED', 'CLOSED')
+      AND i."category" = ${params.category}::"SosCategory"
       AND ST_DWithin(
-        "centroidGeo",
+        i."centroidGeo",
         ST_SetSRID(ST_MakePoint(${params.longitude}, ${params.latitude}), 4326)::geography,
         ${params.radiusMeters}
       )
     ORDER BY ST_Distance(
-      "centroidGeo",
+      i."centroidGeo",
       ST_SetSRID(ST_MakePoint(${params.longitude}, ${params.latitude}), 4326)::geography
     ) ASC
     LIMIT 1
@@ -166,32 +175,41 @@ export async function findNearbyIncident(params: {
 export async function listNearbyIncidents(query: ListNearbyQuery) {
   const rows = await prisma.$queryRaw<IncidentRow[]>`
     SELECT
-      "id"::text AS "id",
-      "category"::text AS "category",
-      "status"::text AS "status",
-      "priority"::text AS "priority",
-      "title", "description",
-      "reportCount" AS "reportCount",
-      "confidenceScore"::float8 AS "confidenceScore",
-      "clusterRadiusMeters" AS "clusterRadiusMeters",
-      "centroidLat"::float8 AS "centroidLat",
-      "centroidLng"::float8 AS "centroidLng",
-      "firstReportedAt" AS "firstReportedAt",
-      "lastReportedAt" AS "lastReportedAt",
-      "resolvedAt" AS "resolvedAt",
-      "createdAt" AS "createdAt",
-      "updatedAt" AS "updatedAt"
-    FROM "Incident"
+      i."id"::text AS "id",
+      i."category"::text AS "category",
+      i."status"::text AS "status",
+      i."priority"::text AS "priority",
+      i."title", i."description",
+      i."reportCount" AS "reportCount",
+      i."confidenceScore"::float8 AS "confidenceScore",
+      i."clusterRadiusMeters" AS "clusterRadiusMeters",
+      i."centroidLat"::float8 AS "centroidLat",
+      i."centroidLng"::float8 AS "centroidLng",
+      i."firstReportedAt" AS "firstReportedAt",
+      i."lastReportedAt" AS "lastReportedAt",
+      i."resolvedAt" AS "resolvedAt",
+      i."createdAt" AS "createdAt",
+      i."updatedAt" AS "updatedAt",
+      m."url" AS "representativeMediaUrl"
+    FROM "Incident" i
+    LEFT JOIN LATERAL (
+      SELECT "url"
+      FROM "SosReportMedia" sm
+      JOIN "SosReport" sr ON sr."id" = sm."reportId"
+      WHERE sr."incidentId" = i."id"
+      ORDER BY sm."uploadedAt" DESC
+      LIMIT 1
+    ) m ON true
     WHERE
-      (${query.status ?? null}::text IS NULL OR "status" = ${query.status ?? null}::"IncidentStatus")
-      AND (${query.category ?? null}::text IS NULL OR "category" = ${query.category ?? null}::"SosCategory")
+      (${query.status ?? null}::text IS NULL OR i."status" = ${query.status ?? null}::"IncidentStatus")
+      AND (${query.category ?? null}::text IS NULL OR i."category" = ${query.category ?? null}::"SosCategory")
       AND ST_DWithin(
-        "centroidGeo",
+        i."centroidGeo",
         ST_SetSRID(ST_MakePoint(${query.longitude}, ${query.latitude}), 4326)::geography,
         ${query.radiusMeters}
       )
     ORDER BY ST_Distance(
-      "centroidGeo",
+      i."centroidGeo",
       ST_SetSRID(ST_MakePoint(${query.longitude}, ${query.latitude}), 4326)::geography
     ) ASC
     LIMIT 100
