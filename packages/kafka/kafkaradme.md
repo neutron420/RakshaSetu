@@ -78,6 +78,35 @@ stateDiagram-v2
     PUBLISHED --> [*]: Cleanup (Optional)
 ```
 
+### 📊 Code Structure & Dependencies
+
+This is how the internal pieces of your codebase are wired up:
+
+```mermaid
+graph LR
+    subgraph "user-be (Main API)"
+        Service[Service Layer] --> OutboxSvc[Outbox Service]
+        OutboxSvc --> Repository[Outbox Repo]
+        Repository --> DB[(PostgreSQL)]
+    end
+
+    subgraph "@rakshasetu/kafka (Shared)"
+        InternalProducer[Producer Logic]
+        InternalConsumer[Consumer Logic]
+        TopicsDef[Topics Registry]
+    end
+
+    OutboxSvc -->|Imports| InternalProducer
+    Worker[Outbox Worker Loop] -->|Polls| Repository
+    Worker -->|Uses| InternalProducer
+    InternalProducer -->|Publishes| KafkaTopic((Kafka Topic))
+    InternalProducer -.->|Looks up| TopicsDef
+
+    style InternalProducer fill:#d4f1f9,stroke:#333
+    style InternalConsumer fill:#d4f1f9,stroke:#333
+    style TopicsDef fill:#fff2cc,stroke:#333
+```
+
 ---
 
 ## 🌟 Major Roles of Kafka
