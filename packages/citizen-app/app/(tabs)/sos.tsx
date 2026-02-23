@@ -188,8 +188,8 @@ export default function SosScreen() {
       });
 
       // Upload media if any
-      if (mediaFiles.length > 0 && res.data?.id) {
-        await uploadMedia(res.data.id);
+      if (mediaFiles.length > 0 && res.data?.reportId) {
+        await uploadMedia(res.data.reportId);
       }
 
       setSubmitted(true);

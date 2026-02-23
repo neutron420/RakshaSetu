@@ -107,11 +107,11 @@ export async function findIncidentById(id: string) {
       m."url" AS "representativeMediaUrl"
     FROM "Incident" i
     LEFT JOIN LATERAL (
-      SELECT "url"
+      SELECT sm."url"
       FROM "SosReportMedia" sm
       JOIN "SosReport" sr ON sr."id" = sm."reportId"
       WHERE sr."incidentId" = i."id"
-      ORDER BY sm."uploadedAt" ASC
+      ORDER BY sm."uploadedAt" DESC
       LIMIT 1
     ) m ON true
     WHERE i."id" = ${id}::uuid
@@ -148,7 +148,7 @@ export async function findNearbyIncident(params: {
       m."url" AS "representativeMediaUrl"
     FROM "Incident" i
     LEFT JOIN LATERAL (
-      SELECT "url"
+      SELECT sm."url"
       FROM "SosReportMedia" sm
       JOIN "SosReport" sr ON sr."id" = sm."reportId"
       WHERE sr."incidentId" = i."id"
@@ -193,7 +193,7 @@ export async function listNearbyIncidents(query: ListNearbyQuery) {
       m."url" AS "representativeMediaUrl"
     FROM "Incident" i
     LEFT JOIN LATERAL (
-      SELECT "url"
+      SELECT sm."url"
       FROM "SosReportMedia" sm
       JOIN "SosReport" sr ON sr."id" = sm."reportId"
       WHERE sr."incidentId" = i."id"
@@ -243,7 +243,7 @@ export async function listIncidents(query: ListIncidentsQuery) {
       m."url" AS "representativeMediaUrl"
     FROM "Incident" i
     LEFT JOIN LATERAL (
-      SELECT "url"
+      SELECT sm."url"
       FROM "SosReportMedia" sm
       JOIN "SosReport" sr ON sr."id" = sm."reportId"
       WHERE sr."incidentId" = i."id"

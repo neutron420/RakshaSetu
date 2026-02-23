@@ -184,8 +184,8 @@ export default function ReportIncidentScreen() {
         longitude: location.lng,
       });
 
-      if (mediaFiles.length > 0 && res.data?.id) {
-        await uploadMedia(res.data.id);
+      if (mediaFiles.length > 0 && res.data?.reportId) {
+        await uploadMedia(res.data.reportId);
       }
 
       setSubmitted(true);

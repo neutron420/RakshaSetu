@@ -41,7 +41,7 @@ async function request<T>(
   return json as ApiResponse<T>;
 }
 
-// ─── Auth Types ──────────────────────────────────────
+
 export type AuthUser = {
   id: string;
   email: string | null;
@@ -101,7 +101,7 @@ export function createSosApi(body: {
   longitude: number;
   clientReportId?: string;
 }) {
-  return request<SosReport>('/sos', {
+  return request<{ reportId: string; status: string; reportedAt: string; duplicate: boolean }>('/sos', {
     method: 'POST',
     body: JSON.stringify(body),
   });
