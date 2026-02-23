@@ -4,7 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import MapView, { Marker } from 'react-native-maps';
 import * as Location from 'expo-location';
-import { getNearbyReliefCentersApi, ReliefCenter, ReliefCenterType, ReliefCenterStatus, Incident, getNearbyIncidentsApi } from '../../services/api';
+import { getNearbyReliefCentersApi, ReliefCenter, ReliefCenterType, ReliefCenterStatus, Incident, getNearbyIncidentsApi, fetchAutomatedReliefCentersApi } from '../../services/api';
 import { socketService } from '../../services/socket';
 
 const TYPE_CONFIG: Record<ReliefCenterType, { icon: keyof typeof Ionicons.glyphMap; color: string; label: string }> = {
@@ -29,6 +29,7 @@ export default function ExploreScreen() {
   const [loading, setLoading] = useState(true);
   const [selectedCenter, setSelectedCenter] = useState<ReliefCenter | null>(null);
   const [selectedIncident, setSelectedIncident] = useState<Incident | null>(null);
+  const [fetchingAutomated, setFetchingAutomated] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -67,8 +68,8 @@ export default function ExploreScreen() {
   async function fetchData(lat: number, lng: number) {
     try {
       const [resCenters, resIncidents] = await Promise.all([
-        getNearbyReliefCentersApi({ latitude: lat, longitude: lng, radiusMeters: 20000 }),
-        getNearbyIncidentsApi({ latitude: lat, longitude: lng, radiusMeters: 20000 })
+        getNearbyReliefCentersApi({ latitude: lat, longitude: lng, radiusMeters: 30000 }),
+        getNearbyIncidentsApi({ latitude: lat, longitude: lng, radiusMeters: 30000 })
       ]);
       setCenters(resCenters.data || []);
       setIncidents(resIncidents.data || []);
@@ -76,6 +77,26 @@ export default function ExploreScreen() {
       console.error('Fetch data error:', err);
       setCenters([]);
       setIncidents([]);
+    }
+  }
+
+  async function handleFetchAutomated() {
+    if (!userCoord) return;
+    try {
+      setFetchingAutomated(true);
+      const res = await fetchAutomatedReliefCentersApi({
+        latitude: userCoord.latitude,
+        longitude: userCoord.longitude,
+        radiusMeters: 30000
+      });
+      console.log('Automated fetch result:', res.data);
+      // Refresh the map data to show new centers
+      await fetchData(userCoord.latitude, userCoord.longitude);
+    } catch (err) {
+      console.error('Automated fetch error:', err);
+      alert('Failed to fetch automated centers');
+    } finally {
+      setFetchingAutomated(false);
     }
   }
 
@@ -104,7 +125,7 @@ export default function ExploreScreen() {
           return (
             <Marker
               key={center.id}
-              coordinate={{ latitude: center.latitude, longitude: center.longitude }}
+              coordinate={{ latitude: Number(center.latitude), longitude: Number(center.longitude) }}
               onPress={() => {
                 setSelectedIncident(null);
                 setSelectedCenter(center);
@@ -123,7 +144,7 @@ export default function ExploreScreen() {
           return (
             <Marker
               key={incident.id}
-              coordinate={{ latitude: incident.centroidLat, longitude: incident.centroidLng }}
+              coordinate={{ latitude: Number(incident.centroidLat), longitude: Number(incident.centroidLng) }}
               onPress={() => {
                 setSelectedCenter(null);
                 setSelectedIncident(incident);
@@ -215,8 +236,24 @@ export default function ExploreScreen() {
 
       {/* Floating Header */}
       <View style={styles.floatingHeader}>
-        <Text style={styles.headerTitle}>Relief Centers</Text>
-        <Text style={styles.headerSubtitle}>Nearby shelters & help</Text>
+        <View>
+          <Text style={styles.headerTitle}>Relief Centers</Text>
+          <Text style={styles.headerSubtitle}>Nearby shelters & hospitals (30km)</Text>
+        </View>
+        <Pressable 
+          style={styles.fetchButton} 
+          onPress={handleFetchAutomated}
+          disabled={fetchingAutomated}
+        >
+          {fetchingAutomated ? (
+            <ActivityIndicator size="small" color="#fff" />
+          ) : (
+            <>
+              <Ionicons name="cloud-download" size={16} color="#fff" />
+              <Text style={styles.fetchButtonText}>Fetch</Text>
+            </>
+          )}
+        </Pressable>
       </View>
     </View>
   );
@@ -264,6 +301,23 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
     shadowRadius: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  fetchButton: {
+    backgroundColor: '#1A73E8',
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 12,
+    gap: 6,
+  },
+  fetchButtonText: {
+    color: '#fff',
+    fontWeight: '700',
+    fontSize: 14,
   },
   headerTitle: {
     fontSize: 20,

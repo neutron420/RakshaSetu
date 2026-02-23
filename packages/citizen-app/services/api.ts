@@ -3,7 +3,7 @@ import { getToken } from './auth-store';
 // Use your machine's LAN IP so Expo Go on your phone can reach the backend.
 // If your IP changes, update this value (run `ipconfig` to check).
 export const BASE_URL = __DEV__
-  ? 'http://172.29.33.194:5001/api/v1'
+  ? 'http://172.29.40.157:5001/api/v1'
   : 'https://your-production-api.com/api/v1';
 
 type ApiResponse<T = unknown> = {
@@ -201,7 +201,7 @@ export function getNearbyIncidentsApi(params: {
   const query = new URLSearchParams({
     latitude: String(params.latitude),
     longitude: String(params.longitude),
-    radiusMeters: String(params.radiusMeters ?? 20000),
+    radiusMeters: String(params.radiusMeters ?? 30000),
   });
   return request<Incident[]>(`/incidents/nearby?${query.toString()}`);
 }
@@ -268,13 +268,24 @@ export function getNearbyReliefCentersApi(params: {
   const query = new URLSearchParams({
     latitude: String(params.latitude),
     longitude: String(params.longitude),
-    radiusMeters: String(params.radiusMeters ?? 20000),
+    radiusMeters: String(params.radiusMeters ?? 30000),
   });
   return request<ReliefCenter[]>(`/relief-centers/nearby?${query.toString()}`);
 }
 
 export function getReliefCenterByIdApi(id: string) {
   return request<ReliefCenter>(`/relief-centers/${id}`);
+}
+
+export function fetchAutomatedReliefCentersApi(body: {
+  latitude: number;
+  longitude: number;
+  radiusMeters?: number;
+}) {
+  return request<{ added: number; totalProcessed: number; message?: string }>('/relief-centers/fetch-automated', {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
 }
 
 // ─── SOS Media Types ─────────────────────────────────
