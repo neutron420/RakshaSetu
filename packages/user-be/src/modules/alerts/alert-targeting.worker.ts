@@ -25,6 +25,69 @@ export async function startAlertTargetingWorker() {
       try {
 
         const radiusMeters = (payload.magnitude ?? 5) * 20000; 
+        
+        // 1. Check if an incident already exists for this exact disaster event ID
+        // (to prevent duplicates if Kafka replays the message)
+        const existingIncident = await prisma.incident.findUnique({
+          where: { id: aggregateId } // Using aggregateId as the Incident ID
+        });
+        
+        if (!existingIncident) {
+          console.log(`[alert-worker] Creating Incident record for weather event: ${aggregateId}`);
+          
+          let category: "FLOOD" | "FIRE" | "EARTHQUAKE" | "ACCIDENT" | "MEDICAL" | "VIOLENCE" | "LANDSLIDE" | "CYCLONE" | "OTHER" = "OTHER";
+          const titleLower = (payload.title || "").toLowerCase();
+          
+          if (titleLower.includes("rain") || titleLower.includes("flood") || titleLower.includes("thunderstorm") || titleLower.includes("squall")) {
+            category = "FLOOD";
+          } else if (titleLower.includes("fire")) {
+            category = "FIRE";
+          } else if (titleLower.includes("earthquake")) {
+            category = "EARTHQUAKE";
+          } else if (titleLower.includes("cyclone") || titleLower.includes("hurricane") || titleLower.includes("tornado")) {
+            category = "CYCLONE";
+          } else if (titleLower.includes("landslide")) {
+             category = "LANDSLIDE";
+          }
+
+          const severityMapping = payload.severity === 'red' ? 'CRITICAL' : payload.severity === 'orange' ? 'HIGH' : payload.severity === 'yellow' ? 'MEDIUM' : 'LOW';
+
+          // Use raw query for the PostGIS centroidGeo insertion
+          await prisma.$executeRaw`
+            INSERT INTO "Incident" (
+              "id", 
+              "category", 
+              "status", 
+              "priority", 
+              "title", 
+              "description", 
+              "centroidLat", 
+              "centroidLng", 
+              "centroidGeo", 
+              "firstReportedAt", 
+              "lastReportedAt", 
+              "createdAt", 
+              "updatedAt"
+            ) VALUES (
+              ${aggregateId}::uuid, 
+              ${category}::"SosCategory", 
+              'OPEN'::"IncidentStatus", 
+              ${severityMapping}::"IncidentPriority", 
+              ${payload.title}, 
+              ${payload.description || 'Automated weather alert'}, 
+              ${payload.latitude}, 
+              ${payload.longitude}, 
+              ST_SetSRID(ST_MakePoint(${payload.longitude}, ${payload.latitude}), 4326)::geography,
+              NOW(), 
+              NOW(), 
+              NOW(), 
+              NOW()
+            )
+            ON CONFLICT ("id") DO NOTHING;
+          `;
+        } else {
+             console.log(`[alert-worker] Incident already exists for ${aggregateId}, skipping creation.`);
+        }
 
         const impactedUsers = await prisma.$queryRaw<{ id: string }[]>`
           SELECT "id"::text as "id"
@@ -45,7 +108,7 @@ export async function startAlertTargetingWorker() {
           await sendNotificationToUsers(
             userIds,
             "🚨 CRITICAL SAFETY ALERT",
-            `A ${payload.magnitude} magnitude earthquake occurred at ${payload.place}. Take immediate shelter if you are in a danger zone.`,
+            `A ${payload.title || 'Severe Event'} has been detected at ${payload.place || 'your area'}. Take immediate shelter if you are in a danger zone.`,
             {
               type: "NATURAL_DISASTER",
               disasterId: aggregateId,

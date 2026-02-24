@@ -67,7 +67,7 @@ export async function claimPendingMessages(batchSize = 10) {
         m."createdAt" AS "createdAt"
     `;
     return claimed;
-  }, { timeout: 15000 });
+  }, { timeout: 30000 });
 
   return rows;
 }

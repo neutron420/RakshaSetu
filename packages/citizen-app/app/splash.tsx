@@ -1,4 +1,5 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { hasValidSession } from '../services/auth-store';
 import { View, Text, StyleSheet, Animated, Dimensions, Pressable } from 'react-native';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
@@ -152,6 +153,7 @@ export default function WelcomeScreen() {
           <Text style={styles.buttonArrow}>›</Text>
         </Pressable>
       </Animated.View>
+      ){'}'}
 
       {/* Bottom tagline */}
       <Animated.View style={[styles.taglineContainer, { opacity: taglineOpacity }]}>

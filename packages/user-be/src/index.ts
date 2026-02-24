@@ -41,6 +41,7 @@ initWebSocket(httpServer);
 
 import { processOutbox } from "./modules/outbox/outbox.service";
 import { pollDisasterEvents } from "./modules/alerts/disaster-ingestion.service";
+import { pollWeatherAlerts } from "./modules/alerts/weather-ingestion.service";
 import { startAlertTargetingWorker } from "./modules/alerts/alert-targeting.worker";
 
 // Suppress KafkaJS internal TimeoutNegativeWarning (known bug in kafkajs)
@@ -81,6 +82,12 @@ setTimeout(() => {
   setInterval(() => {
     void pollDisasterEvents();
   }, 10 * 60 * 1000);
+
+  // Poll Weather alerts every 15 minutes
+  void pollWeatherAlerts();
+  setInterval(() => {
+    void pollWeatherAlerts();
+  }, 15 * 60 * 1000);
 }, 15000);
 
 async function shutdown(signal: string) {

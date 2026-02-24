@@ -178,17 +178,15 @@ export default function IncidentDetailScreen() {
     <View style={styles.container}>
       <StatusBar style="dark" />
 
-      {/* Top Bar */}
-      <View style={styles.topBar}>
+      {/* Floating Back Button */}
+      <View style={styles.floatingHeader}>
         <Pressable
-          style={({ pressed }) => [styles.topBackBtn, pressed && { opacity: 0.6 }]}
+          style={({ pressed }) => [styles.floatingBackBtn, pressed && { opacity: 0.7 }]}
           onPress={() => router.back()}
-          hitSlop={12}
+          hitSlop={20}
         >
-          <Ionicons name="arrow-back" size={24} color="#1A2B4A" />
+          <Ionicons name="arrow-back" size={26} color="#1A2B4A" />
         </Pressable>
-        <Text style={styles.topBarTitle}>Incident Details</Text>
-        <View style={{ width: 40 }} />
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
@@ -437,34 +435,24 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     fontSize: 15,
   },
-  topBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingTop: 56,
-    paddingBottom: 16,
-    backgroundColor: '#FFFFFF',
-    borderBottomLeftRadius: 24,
-    borderBottomRightRadius: 24,
-    shadowColor: '#0D47A1',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.06,
-    shadowRadius: 12,
-    elevation: 6,
+  floatingHeader: {
+    position: 'absolute',
+    top: 56,
+    left: 20,
+    zIndex: 10,
   },
-  topBackBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    backgroundColor: '#F0F7FF',
+  floatingBackBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  topBarTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#1A2B4A',
+    shadowColor: '#0D47A1',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 8,
   },
   scrollContent: {
     padding: 20,

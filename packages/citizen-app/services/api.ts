@@ -1,7 +1,7 @@
 import { getToken } from './auth-store';
 
 export const BASE_URL = __DEV__
-  ? 'http://10.153.5.187:5001/api/v1'
+  ? 'http://172.29.27.39:5001/api/v1'
   : 'https://your-production-api.com/api/v1';
 
 type ApiResponse<T = unknown> = {
@@ -109,7 +109,6 @@ export function listMySosReportsApi() {
   return request<SosReport[]>('/sos/my');
 }
 
-// ─── Incident Types ──────────────────────────────────
 export type IncidentStatus =
   | 'OPEN' | 'INVESTIGATING' | 'IN_PROGRESS'
   | 'CONTAINED' | 'RESOLVED' | 'CLOSED';
@@ -117,6 +116,7 @@ export type IncidentStatus =
 export type IncidentPriority = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
 
 export type Incident = {
+  severity: string;
   id: string;
   category: SosCategory;
   title: string;
@@ -159,7 +159,6 @@ export type IncidentMedia = {
   uploadedAt: string;
 };
 
-// ─── Incidents API ───────────────────────────────────
 
 export async function listIncidentsApi(params?: {
   page?: number;
@@ -209,7 +208,7 @@ export function getIncidentMediaApi(id: string) {
   return request<IncidentMedia[]>(`/incidents/${id}/media`);
 }
 
-// ─── User Types ──────────────────────────────────────
+
 export type UserProfile = {
   id: string;
   email: string | null;
@@ -230,6 +229,8 @@ export function patchMeApi(body: {
   fullName?: string;
   phone?: string | null;
   pushToken?: string;
+  latitude?: number;
+  longitude?: number;
 }) {
   return request<UserProfile>('/users/me', {
     method: 'PATCH',

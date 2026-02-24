@@ -54,6 +54,9 @@ export default function ReportIncidentScreen() {
   const [submitted, setSubmitted] = useState(false);
   const [mediaFiles, setMediaFiles] = useState<SelectedMedia[]>([]);
   const [uploadProgress, setUploadProgress] = useState('');
+  
+  const [addressDetails, setAddressDetails] = useState<string | null>(null);
+  const [fetchingAddress, setFetchingAddress] = useState(false);
 
   // Floating animation for header icon
   const floatAnim = useRef(new Animated.Value(0)).current;
@@ -86,6 +89,41 @@ export default function ReportIncidentScreen() {
       }
     })();
   }, []);
+
+  async function fetchAddressDetails() {
+    if (!location) return;
+    setFetchingAddress(true);
+    try {
+      const result = await Location.reverseGeocodeAsync({
+        latitude: location.lat,
+        longitude: location.lng,
+      });
+
+      if (result && result.length > 0) {
+        const place = result[0];
+        // e.g. "Anna Nagar, Chennai, Tamil Nadu, 600040"
+        const parts = [
+          place.name,          // usually building or immediate area (e.g. Anna Nagar)
+          place.city || place.district,   // city or district
+          place.region,        // state
+          place.postalCode     // pincode
+        ].filter(Boolean);     // filter out nulls
+
+        if (parts.length > 0) {
+          setAddressDetails(parts.join(', '));
+        } else {
+          Alert.alert('Notice', 'Could not find details for this specific location.');
+        }
+      } else {
+        Alert.alert('Notice', 'No address details found.');
+      }
+    } catch (err: any) {
+      console.error('[geocoding] error', err);
+      Alert.alert('Error', 'Could not fetch area details. Please check your connection.');
+    } finally {
+      setFetchingAddress(false);
+    }
+  }
 
   async function pickImage() {
     try {
@@ -177,9 +215,14 @@ export default function ReportIncidentScreen() {
     setLoading(true);
     try {
       // Reuses createSosApi since it automatically creates/links incidents
+      let finalDescription = description.trim();
+      if (addressDetails) {
+        finalDescription += `\n\nLocation Context:\n${addressDetails}`;
+      }
+
       const res = await createSosApi({
         category: selectedCategory,
-        description: description.trim() || undefined,
+        description: finalDescription || undefined,
         latitude: location.lat,
         longitude: location.lng,
       });
@@ -242,24 +285,56 @@ export default function ReportIncidentScreen() {
         </View>
 
         {/* Location Status */}
-        <View style={styles.locRow}>
-          {locLoading ? (
-            <>
-              <ActivityIndicator size="small" color="#1A73E8" />
-              <Text style={styles.locText}>Detecting location...</Text>
-            </>
-          ) : location ? (
-            <>
-              <Ionicons name="location" size={18} color="#1A73E8" />
-              <Text style={[styles.locText, { color: '#1A73E8' }]}>
-                Mapped to ({location.lat.toFixed(4)}, {location.lng.toFixed(4)})
-              </Text>
-            </>
-          ) : (
-            <>
-              <Ionicons name="location-outline" size={18} color="#D32F2F" />
-              <Text style={[styles.locText, { color: '#D32F2F' }]}>Location not detected</Text>
-            </>
+        <View style={styles.locSection}>
+          <View style={styles.locRow}>
+            {locLoading ? (
+              <>
+                <ActivityIndicator size="small" color="#1A73E8" />
+                <Text style={styles.locText}>Detecting location...</Text>
+              </>
+            ) : location ? (
+              <>
+                <Ionicons name="location" size={18} color="#1A73E8" />
+                <Text style={[styles.locText, { color: '#1A73E8' }]}>
+                  Mapped to ({location.lat.toFixed(4)}, {location.lng.toFixed(4)})
+                </Text>
+              </>
+            ) : (
+              <>
+                <Ionicons name="location-outline" size={18} color="#D32F2F" />
+                <Text style={[styles.locText, { color: '#D32F2F' }]}>Location not detected</Text>
+              </>
+            )}
+          </View>
+
+          {location && (
+            <View style={styles.addressWrapper}>
+              {addressDetails ? (
+                <View style={styles.addressBox}>
+                  <Ionicons name="map" size={16} color="#475569" style={{ marginTop: 2 }} />
+                  <Text style={styles.addressText}>{addressDetails}</Text>
+                </View>
+              ) : (
+                <Pressable
+                  onPress={fetchAddressDetails}
+                  disabled={fetchingAddress}
+                  style={({ pressed }) => [
+                    styles.fetchAddrBtn,
+                    pressed && { opacity: 0.8 },
+                    fetchingAddress && { opacity: 0.5 }
+                  ]}
+                >
+                  {fetchingAddress ? (
+                    <ActivityIndicator size="small" color="#1A73E8" />
+                  ) : (
+                    <>
+                      <Ionicons name="search" size={16} color="#1A73E8" />
+                      <Text style={styles.fetchAddrText}>Fetch Details & Pincode</Text>
+                    </>
+                  )}
+                </Pressable>
+              )}
+            </View>
           )}
         </View>
 
@@ -421,12 +496,54 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    marginBottom: 30,
-    paddingVertical: 12,
+    marginBottom: 10,
     backgroundColor: '#EBF5FF',
     borderRadius: 12,
   },
+  locSection: {
+    marginBottom: 30,
+    backgroundColor: '#EBF5FF',
+    borderRadius: 12,
+    padding: 12,
+  },
   locText: {
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  addressWrapper: {
+    marginTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#D1E8FF',
+    paddingTop: 10,
+    alignItems: 'center',
+  },
+  addressBox: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 6,
+    paddingHorizontal: 10,
+  },
+  addressText: {
+    fontSize: 13,
+    color: '#475569',
+    fontWeight: '500',
+    flexShrink: 1,
+    lineHeight: 18,
+  },
+  fetchAddrBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    backgroundColor: '#EBF5FF',
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#1A73E8',
+  },
+  fetchAddrText: {
+    color: '#1A73E8',
     fontSize: 13,
     fontWeight: '600',
   },

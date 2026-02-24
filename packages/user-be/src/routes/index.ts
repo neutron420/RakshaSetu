@@ -8,6 +8,7 @@ import { timelineRouter } from "./timeline.routes";
 import { usersRouter } from "./users.routes";
 import { reliefCentersRouter } from "../modules/relief-centers/relief-centers.controller";
 import { broadcast } from "../ws";
+import { pollWeatherAlerts } from "../modules/alerts/weather-ingestion.service";
 
 export const apiRouter = Router();
 
@@ -22,6 +23,12 @@ apiRouter.post("/test-alert", (req, res) => {
     }
   });
   res.json({ success: true, message: "Emergency alert broadcasted" });
+});
+
+apiRouter.post("/test/weather-poll", async (_req, res) => {
+  console.log("[Test] Manually triggering weather poll...");
+  await pollWeatherAlerts();
+  res.json({ success: true, message: "Weather poll triggered" });
 });
 
 apiRouter.use("/auth", authRouter);

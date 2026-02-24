@@ -2,10 +2,6 @@ import { sendOutboxMessage } from "@rakshasetu/kafka";
 import { broadcast } from "../../ws";
 import { claimPendingMessages, createOutboxMessage, markFailed, markPublished } from "./outbox.repo";
 
-/**
- * Enqueue an event into the outbox table.
- * Called by service layers when something important happens.
- */
 export async function enqueueEvent(data: {
   aggregateType: string;
   aggregateId: string;
@@ -34,6 +30,18 @@ export async function processOutbox(batchSize = 10) {
           data: msg.payload,
         },
       });
+
+      // Also broadcast as a generic EMERGENCY_ALERT if it's a disaster
+      if (msg.eventType === "NaturalDisasterAlert") {
+        broadcast({
+          type: "EMERGENCY_ALERT",
+          payload: {
+            disasterType: (msg.payload as any).alertType || "Emergency",
+            location: (msg.payload as any).place || "Your Area",
+            severity: (msg.payload as any).severity || "critical"
+          }
+        });
+      }
 
       await sendOutboxMessage({
         id: msg.id,

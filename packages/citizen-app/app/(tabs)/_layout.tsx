@@ -90,6 +90,15 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="danger-zones"
+        options={{
+          title: 'Danger Zones',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="flame" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="my-reports"
         options={{
           title: 'My Reports',
@@ -99,11 +108,11 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="profile"
+        name="settings"
         options={{
-          title: 'Profile',
+          title: 'Settings',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="person" size={size} color={color} />
+            <Ionicons name="settings" size={size} color={color} />
           ),
         }}
       />

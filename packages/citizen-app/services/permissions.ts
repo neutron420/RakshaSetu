@@ -22,6 +22,18 @@ export async function requestLocationPermission(): Promise<boolean> {
 }
 
 /**
+ * Request background location permission.
+ * This is required for geo-fenced alerts even when the app is closed.
+ */
+export async function requestBackgroundLocationPermission(): Promise<boolean> {
+  const { status } = await Location.requestBackgroundPermissionsAsync();
+  if (status === 'granted') return true;
+
+  console.log('[permissions] Background location permission denied');
+  return false;
+}
+
+/**
  * Request camera permission.
  */
 export async function requestCameraPermission(): Promise<boolean> {
@@ -65,6 +77,7 @@ export async function requestMediaLibraryPermission(): Promise<boolean> {
 export async function requestAllPermissions(): Promise<void> {
   // Location is the most critical for an emergency app
   await requestLocationPermission();
+  await requestBackgroundLocationPermission();
 
   // Camera for capturing emergency evidence
   await requestCameraPermission();
