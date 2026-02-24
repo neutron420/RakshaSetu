@@ -1,9 +1,7 @@
 import { getToken } from './auth-store';
 
-// Use your machine's LAN IP so Expo Go on your phone can reach the backend.
-// If your IP changes, update this value (run `ipconfig` to check).
 export const BASE_URL = __DEV__
-  ? 'http://172.29.40.157:5001/api/v1'
+  ? 'http://10.153.5.187:5001/api/v1'
   : 'https://your-production-api.com/api/v1';
 
 type ApiResponse<T = unknown> = {

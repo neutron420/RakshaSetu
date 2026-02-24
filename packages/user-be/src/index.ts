@@ -7,7 +7,7 @@ import helmet from "helmet";
 import morgan from "morgan";
 // Load env first so KAFKA_* etc are available to @rakshasetu/kafka
 import { env } from "./config/env";
-import { connectProducer, disconnectProducer } from "@rakshasetu/kafka";
+import { connectProducer, disconnectProducer, initTopics } from "@rakshasetu/kafka";
 import { prisma } from "./common/db/prisma";
 import { errorMiddleware } from "./common/middleware/error.middleware";
 import { notFoundMiddleware } from "./common/middleware/not-found.middleware";
@@ -40,6 +40,8 @@ const httpServer = createServer(app);
 initWebSocket(httpServer);
 
 import { processOutbox } from "./modules/outbox/outbox.service";
+import { pollDisasterEvents } from "./modules/alerts/disaster-ingestion.service";
+import { startAlertTargetingWorker } from "./modules/alerts/alert-targeting.worker";
 
 // Suppress KafkaJS internal TimeoutNegativeWarning (known bug in kafkajs)
 process.removeAllListeners("warning");
@@ -49,6 +51,9 @@ process.on("warning", (warning) => {
 });
 
 httpServer.listen(env.port, async () => {
+  await initTopics().catch((err: any) => {
+    console.warn("[kafka] topic init failed:", err.message);
+  });
   await connectProducer().catch((err: unknown) => {
     console.warn("[kafka] producer connect failed (events will still go to WebSocket):", err instanceof Error ? err.message : err);
   });
@@ -65,6 +70,18 @@ setTimeout(() => {
     });
   }, 5000);
 }, 10000);
+
+// Start Early Warning System (EWS) components
+setTimeout(() => {
+  console.log("[EWS] Starting disaster ingestion and targeting worker...");
+  void startAlertTargetingWorker().catch(err => console.error("[EWS] Targeting worker failed:", err));
+  
+  // Poll USGS every 10 minutes
+  void pollDisasterEvents();
+  setInterval(() => {
+    void pollDisasterEvents();
+  }, 10 * 60 * 1000);
+}, 15000);
 
 async function shutdown(signal: string) {
   console.log(`Received ${signal}. Shutting down...`);

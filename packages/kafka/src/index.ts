@@ -14,3 +14,5 @@ export {
   runConsumer,
   disconnectConsumer,
 } from "./consumer.js";
+import { init as initTopics } from "./init-topics.js";
+export { initTopics };

@@ -1,6 +1,7 @@
 import { Expo, type ExpoPushMessage } from "expo-server-sdk";
 import { prisma } from "../../common/db/prisma";
 import { env } from "../../config/env";
+import { sendToUser } from "../../ws";
 
 const expo = new Expo({ accessToken: env.expoAccessToken });
 
@@ -64,5 +65,13 @@ export async function sendNotificationToUsers(userIds: string[], title: string, 
     } catch (error) {
        console.error("Error sending chunk:", error);
     }
+  }
+
+  // Also send via WebSockets for real-time alerts (critical for Expo Go)
+  for (const userId of userIds) {
+    sendToUser(userId, {
+      type: "EMERGENCY_ALERT",
+      payload: data
+    });
   }
 }

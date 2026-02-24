@@ -132,7 +132,11 @@ export function sendToUser(userId: string, data: WsMessage) {
 }
 
 export function broadcast(data: WsMessage) {
-  if (!wss) return;
+  if (!wss) {
+    console.warn("[ws] Cannot broadcast, wss not initialized");
+    return;
+  }
+  console.log(`[ws] Broadcasting ${data.type} to ${wss.clients.size} clients`);
   for (const ws of wss.clients) {
     send(ws, data);
   }

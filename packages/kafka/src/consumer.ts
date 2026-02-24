@@ -10,6 +10,8 @@ export function createConsumer(groupId: string): Consumer {
     kafka = new Kafka({
       clientId: kafkaConfig.clientId,
       brokers: kafkaConfig.brokers,
+      retry: kafkaConfig.retry,
+      logLevel: kafkaConfig.logLevel,
     });
   }
   consumer = kafka.consumer({ groupId });

@@ -7,8 +7,22 @@ import { teamsRouter } from "./teams.routes";
 import { timelineRouter } from "./timeline.routes";
 import { usersRouter } from "./users.routes";
 import { reliefCentersRouter } from "../modules/relief-centers/relief-centers.controller";
+import { broadcast } from "../ws";
 
 export const apiRouter = Router();
+
+apiRouter.post("/test-alert", (req, res) => {
+  const { disasterType, location, severity } = req.body;
+  broadcast({
+    type: "EMERGENCY_ALERT",
+    payload: {
+      disasterType,
+      location,
+      severity
+    }
+  });
+  res.json({ success: true, message: "Emergency alert broadcasted" });
+});
 
 apiRouter.use("/auth", authRouter);
 apiRouter.use("/users", usersRouter);

@@ -2,7 +2,7 @@ import { Kafka } from "kafkajs";
 import { kafkaConfig } from "./config.js";
 import { TOPICS } from "./topics.js";
 
-async function init() {
+export async function init() {
   if (!kafkaConfig.enabled) {
     console.log("Kafka is disabled via settings. Skipping topic initialization.");
     return;
@@ -12,6 +12,8 @@ async function init() {
   const kafka = new Kafka({
     clientId: `${kafkaConfig.clientId}-admin`,
     brokers: kafkaConfig.brokers,
+    retry: kafkaConfig.retry,
+    logLevel: kafkaConfig.logLevel,
   });
 
   const admin = kafka.admin();
@@ -46,4 +48,5 @@ async function init() {
   }
 }
 
-init();
+
+// init();

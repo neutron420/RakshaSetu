@@ -51,7 +51,7 @@ class SocketService {
     this.socket.onmessage = (event) => {
       try {
         const data: SocketMessage = JSON.parse(event.data);
-        console.log('[socket] message:', data.type);
+        console.log('[socket] received:', data.type, data.payload);
         const set = this.listeners.get(data.type);
         if (set) {
           set.forEach((l) => l(data.payload));

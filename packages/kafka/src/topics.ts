@@ -4,6 +4,7 @@ export const TOPICS = {
   INCIDENTS_UPDATED: "rakshasetu.incidents.updated",
   ASSIGNMENTS_CREATED: "rakshasetu.assignments.created",
   ASSIGNMENTS_UPDATED: "rakshasetu.assignments.updated",
+  NATURAL_DISASTER_ALERT: "rakshasetu.alerts.disaster",
 } as const;
 
 export type TopicName = (typeof TOPICS)[keyof typeof TOPICS];
@@ -18,6 +19,8 @@ export function getTopicForEventType(eventType: string): string | null {
       return TOPICS.ASSIGNMENTS_CREATED;
     case "AssignmentStatusUpdated":
       return TOPICS.ASSIGNMENTS_UPDATED;
+    case "NaturalDisasterAlert":
+      return TOPICS.NATURAL_DISASTER_ALERT;
     default:
       return null;
   }

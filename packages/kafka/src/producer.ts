@@ -10,6 +10,8 @@ function getProducer(): Producer {
     kafka = new Kafka({
       clientId: kafkaConfig.clientId,
       brokers: kafkaConfig.brokers,
+      retry: kafkaConfig.retry,
+      logLevel: kafkaConfig.logLevel,
     });
     producer = kafka.producer();
   }
