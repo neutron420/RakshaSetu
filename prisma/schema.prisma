@@ -190,28 +190,30 @@ model IncidentUpvote {
 }
 
 model SosReport {
-  id                 String                                @id @default(uuid()) @db.Uuid
-  reporterId         String                                @db.Uuid
-  incidentId         String?                               @db.Uuid
-  category           SosCategory
-  status             SosReportStatus                       @default(RECEIVED)
-  verificationStatus VerificationStatus                    @default(PENDING)
-  description        String?                               @db.Text
-  severity           Int?                                  @db.SmallInt
-  source             String                                @default("mobile") @db.VarChar(32)
+  id                    String                                @id @default(uuid()) @db.Uuid
+  reporterId            String                                @db.Uuid
+  incidentId            String?                               @db.Uuid
+  category              SosCategory
+  status                SosReportStatus                       @default(RECEIVED)
+  verificationStatus    VerificationStatus                    @default(PENDING)
+  description           String?                               @db.Text
+  translatedDescription String?                               @db.Text
+  aiSeverityScore       Int?                                  @db.SmallInt
+  severity              Int?                                  @db.SmallInt
+  source                String                                @default("mobile") @db.VarChar(32)
   // Idempotency key from client to prevent duplicate report creation.
-  clientReportId     String?                               @db.VarChar(64)
-  latitude           Decimal                               @db.Decimal(9, 6)
-  longitude          Decimal                               @db.Decimal(9, 6)
-  accuracyMeters     Decimal?                              @db.Decimal(10, 2)
-  locationGeo        Unsupported("geography(Point, 4326)")
-  happenedAt         DateTime?                             @db.Timestamptz(6)
-  reportedAt         DateTime                              @default(now()) @db.Timestamptz(6)
-  createdAt          DateTime                              @default(now()) @db.Timestamptz(6)
-  updatedAt          DateTime                              @updatedAt @db.Timestamptz(6)
-  reporter           User                                  @relation("ReporterReports", fields: [reporterId], references: [id], onDelete: Restrict)
-  incident           Incident?                             @relation(fields: [incidentId], references: [id], onDelete: SetNull)
-  mediaAttachments   SosReportMedia[]
+  clientReportId        String?                               @db.VarChar(64)
+  latitude              Decimal                               @db.Decimal(9, 6)
+  longitude             Decimal                               @db.Decimal(9, 6)
+  accuracyMeters        Decimal?                              @db.Decimal(10, 2)
+  locationGeo           Unsupported("geography(Point, 4326)")
+  happenedAt            DateTime?                             @db.Timestamptz(6)
+  reportedAt            DateTime                              @default(now()) @db.Timestamptz(6)
+  createdAt             DateTime                              @default(now()) @db.Timestamptz(6)
+  updatedAt             DateTime                              @updatedAt @db.Timestamptz(6)
+  reporter              User                                  @relation("ReporterReports", fields: [reporterId], references: [id], onDelete: Restrict)
+  incident              Incident?                             @relation(fields: [incidentId], references: [id], onDelete: SetNull)
+  mediaAttachments      SosReportMedia[]
 
   @@unique([reporterId, clientReportId], map: "ux_sos_report_idempotency")
   @@index([incidentId, reportedAt], map: "idx_sos_report_incident_time")

@@ -10,11 +10,13 @@
     "prisma:generate": "prisma generate --config ../../prisma.config.ts"
   },
   "dependencies": {
-    "@rakshasetu/kafka": "file:../kafka",
     "@aws-sdk/client-s3": "^3.993.0",
     "@aws-sdk/s3-request-presigner": "^3.993.0",
+    "@langchain/core": "^1.1.28",
+    "@langchain/openai": "^1.2.10",
     "@prisma/adapter-pg": "^7.4.0",
     "@prisma/client": "^7.4.0",
+    "@rakshasetu/kafka": "file:../kafka",
     "bcryptjs": "^3.0.2",
     "compression": "^1.8.1",
     "cookie-parser": "^1.4.7",
@@ -25,10 +27,11 @@
     "express-rate-limit": "^8.1.0",
     "helmet": "^8.1.0",
     "jsonwebtoken": "^9.0.2",
+    "langchain": "^1.2.27",
     "morgan": "^1.10.1",
     "pg": "^8.18.0",
     "ws": "^8.19.0",
-    "zod": "^3.24.1"
+    "zod": "^3.25.76"
   },
   "devDependencies": {
     "@types/cookie-parser": "^1.4.9",

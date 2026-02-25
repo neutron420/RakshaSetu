@@ -12,6 +12,7 @@ import { RedAlertModal } from '@/components/alerts/RedAlertModal';
 import { startBackgroundLocationUpdates } from '@/services/location-background';
 import { requestBlePermissions } from '@/services/ble-mesh/permissions';
 import { startBackgroundBLEScanner, stopBLEScanner } from '@/services/ble-mesh/scanner';
+import { ChatFab } from '@/components/ChatFab';
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
@@ -122,6 +123,9 @@ export default function RootLayout() {
         severity={alertData.severity}
         onClose={() => setAlertVisible(false)}
       />
+      
+      {/* Global AI Chatbot Button */}
+      <ChatFab />
     </ThemeProvider>
   );
 }

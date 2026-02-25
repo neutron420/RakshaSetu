@@ -7,6 +7,7 @@ import { bleRelayRouter } from "../modules/sos/ble-relay.routes";
 import { teamsRouter } from "./teams.routes";
 import { timelineRouter } from "./timeline.routes";
 import { usersRouter } from "./users.routes";
+import { chatRouter } from "./chat.routes";
 import { reliefCentersRouter } from "../modules/relief-centers/relief-centers.controller";
 import { broadcast } from "../ws";
 import { pollWeatherAlerts } from "../modules/alerts/weather-ingestion.service";
@@ -34,6 +35,7 @@ apiRouter.post("/test/weather-poll", async (_req, res) => {
 
 apiRouter.use("/auth", authRouter);
 apiRouter.use("/users", usersRouter);
+apiRouter.use("/chat", chatRouter);
 apiRouter.use("/sos", sosRouter);
 apiRouter.use("/sos", bleRelayRouter);
 apiRouter.use("/incidents", incidentsRouter);

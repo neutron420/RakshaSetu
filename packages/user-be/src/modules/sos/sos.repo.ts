@@ -17,7 +17,7 @@ export async function findByReporterAndClientReportId(reporterId: string, client
   return rows[0] ?? null;
 }
 
-export async function createSosReport(reporterId: string, input: CreateSosInput) {
+export async function createSosReport(reporterId: string, input: CreateSosInput, aiResult?: { translatedText?: string; severityScore?: number }) {
   const reportId = randomUUID();
 
   const inserted = await prisma.$queryRaw<Array<{ id: string; status: string; reportedAt: Date }>>`
@@ -26,6 +26,8 @@ export async function createSosReport(reporterId: string, input: CreateSosInput)
       "reporterId",
       "category",
       "description",
+      "translatedDescription",
+      "aiSeverityScore",
       "clientReportId",
       "latitude",
       "longitude",
@@ -39,6 +41,8 @@ export async function createSosReport(reporterId: string, input: CreateSosInput)
       ${reporterId}::uuid,
       ${input.category}::"SosCategory",
       ${input.description ?? null},
+      ${aiResult?.translatedText ?? null},
+      ${aiResult?.severityScore ?? null},
       ${input.clientReportId ?? null},
       ${input.latitude},
       ${input.longitude},
