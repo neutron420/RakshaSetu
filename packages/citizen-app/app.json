@@ -75,6 +75,17 @@
           "isAndroidBackgroundLocationEnabled": true
         }
       ],
+      [
+        "@config-plugins/react-native-ble-plx",
+        {
+          "isBackgroundEnabled": true,
+          "modes": [
+            "peripheral",
+            "central"
+          ],
+          "bluetoothAlwaysPermission": "RakshaSetu needs bluetooth to relay emergency SOS beacons from citizens trapped without internet access."
+        }
+      ],
       "@rnmapbox/maps"
     ],
     "experiments": {

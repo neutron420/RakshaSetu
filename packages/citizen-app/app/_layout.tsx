@@ -10,6 +10,8 @@ import Constants, { ExecutionEnvironment } from 'expo-constants';
 import { socketService } from '@/services/socket';
 import { RedAlertModal } from '@/components/alerts/RedAlertModal';
 import { startBackgroundLocationUpdates } from '@/services/location-background';
+import { requestBlePermissions } from '@/services/ble-mesh/permissions';
+import { startBackgroundBLEScanner, stopBLEScanner } from '@/services/ble-mesh/scanner';
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
@@ -64,6 +66,16 @@ export default function RootLayout() {
     // Start background location tracking for EWS
     void startBackgroundLocationUpdates();
 
+    // Start BLE Mesh Scanner — detect offline SOS beacons from nearby victims
+    requestBlePermissions().then((granted) => {
+      if (granted) {
+        console.log('[BLE] Permissions granted, starting passive mesh scanner...');
+        startBackgroundBLEScanner();
+      } else {
+        console.warn('[BLE] Permissions denied, mesh relay will not function.');
+      }
+    });
+
     // Listen for incoming notifications
     const subscription = Notifications.addNotificationReceivedListener(notification => {
       const { data } = notification.request.content;
@@ -85,6 +97,7 @@ export default function RootLayout() {
       offEmergency();
       offLegacy();
       offOutbox();
+      stopBLEScanner();
     };
   }, []);
 

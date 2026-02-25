@@ -2,10 +2,6 @@
 import { prisma } from "../../common/db/prisma";
 import { broadcastToRole, sendToUser } from "../../ws";
 
-/**
- * Finds users within a certain radius (default 2km) of a location
- * and sends them a real-time emergency alert.
- */
 export async function alertNearbyUsers(params: {
   incidentId: string;
   category: string;
