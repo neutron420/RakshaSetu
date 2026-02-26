@@ -20,6 +20,34 @@ If the Express backend queries PostgreSQL or Mapbox for *every single one of the
 ### The Solution
 We introduce **Redis** as a caching and rate-limiting layer. Redis stores data entirely in RAM, making it roughly 100x faster than PostgreSQL for read operations. 
 
+```mermaid
+sequenceDiagram
+    participant App as Citizen App
+    participant Limit as Rate Limiter (Redis)
+    participant API as User Backend
+    participant Cache as Redis Cache
+    participant DB as DB/Mapbox
+
+    App->>Limit: Request Heatmap / Hospitals
+    
+    alt is Rate Limited? (>100 req/min)
+        Limit-->>App: 429 Too Many Requests (Blocked)
+    else is Allowed
+        Limit->>API: Pass Request
+        API->>Cache: 1. Check Cache for Data
+        
+        alt Cache HIT
+            Cache-->>API: Return Cached JSON (0.01s)
+            API-->>App: Return Fast Response
+        else Cache MISS
+            API->>DB: 2. Slow Fetch (1-2s)
+            DB-->>API: Return Data
+            API->>Cache: 3. Save Data with 60s TTL
+            API-->>App: Return Response
+        end
+    end
+```
+
 ---
 
 ## 2. What exactly are we building?
