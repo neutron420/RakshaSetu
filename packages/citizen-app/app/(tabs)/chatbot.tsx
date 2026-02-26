@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { StyleSheet, FlatList, KeyboardAvoidingView, Platform, View, ActivityIndicator } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { ThemedText } from '@/components/themed-text';
@@ -10,6 +10,7 @@ import { TextInput, TouchableOpacity, Image } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Markdown from 'react-native-markdown-display';
 import * as Location from 'expo-location';
+import { Audio } from 'expo-av';
 import { BASE_URL } from '@/services/api';
 import { getToken } from '@/services/auth-store';
 
@@ -36,6 +37,121 @@ export default function ChatbotScreen() {
   ]);
   const [inputText, setInputText] = useState('');
   const [loading, setLoading] = useState(false);
+  const [recording, setRecording] = useState<Audio.Recording | null>(null);
+  const [isRecording, setIsRecording] = useState(false);
+
+  useEffect(() => {
+    return () => {
+      if (recording) {
+        recording.stopAndUnloadAsync();
+      }
+    };
+  }, [recording]);
+
+  const startRecording = async () => {
+    try {
+      const { status } = await Audio.requestPermissionsAsync();
+      if (status !== 'granted') return;
+      await Audio.setAudioModeAsync({
+        allowsRecordingIOS: true,
+        playsInSilentModeIOS: true,
+      });
+      const { recording } = await Audio.Recording.createAsync(Audio.RecordingOptionsPresets.HIGH_QUALITY);
+      setRecording(recording);
+      setIsRecording(true);
+    } catch (err) {
+      console.error('Failed to start recording', err);
+    }
+  };
+
+  const stopRecording = async () => {
+    if (!recording) return;
+    setIsRecording(false);
+    setLoading(true);
+    try {
+      await recording.stopAndUnloadAsync();
+      const uri = recording.getURI();
+      setRecording(null);
+      if (uri) {
+        await sendAudioMessage(uri);
+      } else {
+        setLoading(false);
+      }
+    } catch (err) {
+      console.error('Failed to stop recording', err);
+      setLoading(false);
+    }
+  };
+
+  const sendAudioMessage = async (uri: string) => {
+    try {
+      let latitude = null;
+      let longitude = null;
+      try {
+        let { status } = await Location.getForegroundPermissionsAsync();
+        if (status === 'granted') {
+          let location = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+          latitude = location.coords.latitude;
+          longitude = location.coords.longitude;
+        }
+      } catch (locErr) {
+        console.log("Location error", locErr);
+      }
+
+      const token = await getToken();
+      const formData = new FormData();
+      formData.append('audio', {
+        uri,
+        name: 'audio.m4a',
+        type: 'audio/m4a',
+      } as any);
+
+      if (latitude !== null && longitude !== null) {
+        formData.append('latitude', latitude.toString());
+        formData.append('longitude', longitude.toString());
+      }
+
+      const response = await fetch(`${BASE_URL}/chat/audio`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
+        body: formData,
+      });
+
+      const data = await response.json();
+
+      if (data.success && data.data?.transcription && data.data?.reply) {
+        // Add transcribed user text
+        const userMsg: Message = {
+          id: Date.now().toString(),
+          text: data.data.transcription,
+          sender: 'user',
+          timestamp: new Date()
+        };
+        // Add bot reply
+        const botMsg: Message = {
+          id: (Date.now() + 1).toString(),
+          text: data.data.reply,
+          sender: 'bot',
+          timestamp: new Date()
+        };
+        setMessages(prev => [...prev, userMsg, botMsg]);
+      } else {
+        throw new Error("Failed to process audio");
+      }
+    } catch (err) {
+      console.error(err);
+      setMessages(prev => [...prev, {
+        id: Date.now().toString(),
+        text: "I couldn't process your voice message. Please try tying it or checking your connection.",
+        sender: 'bot',
+        timestamp: new Date()
+      }]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const sendMessage = async () => {
     if (!inputText.trim()) return;
@@ -173,21 +289,41 @@ export default function ChatbotScreen() {
               style={[styles.input, { color: '#11181C' }]}
               value={inputText}
               onChangeText={setInputText}
-              placeholder="Ask for survival tips, first aid..."
-              placeholderTextColor="#687076"
+              placeholder={isRecording ? "Listening..." : "Ask for survival tips, first aid..."}
+              placeholderTextColor={isRecording ? "#E53935" : "#687076"}
               multiline
+              editable={!isRecording && !loading}
             />
-            <TouchableOpacity 
-              style={[styles.sendButton, { backgroundColor: '#000000' }]} 
-              onPress={sendMessage}
-              disabled={!inputText.trim() || loading}
-            >
-              {loading ? (
-                <ActivityIndicator size="small" color="white" />
-              ) : (
-                <Ionicons name="arrow-up" size={20} color="white" />
-              )}
-            </TouchableOpacity>
+
+            {!inputText.trim() ? (
+              <TouchableOpacity 
+                style={[styles.sendButton, { backgroundColor: isRecording ? '#FFEBEE' : '#F0F2F5' }]} 
+                onPress={isRecording ? stopRecording : startRecording}
+                disabled={loading}
+              >
+                {loading ? (
+                  <ActivityIndicator size="small" color="#11181C" />
+                ) : (
+                  <Ionicons 
+                    name={isRecording ? "stop" : "mic"} 
+                    size={20} 
+                    color={isRecording ? "#E53935" : "#11181C"} 
+                  />
+                )}
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity 
+                style={[styles.sendButton, { backgroundColor: '#000000' }]} 
+                onPress={sendMessage}
+                disabled={loading}
+              >
+                {loading ? (
+                  <ActivityIndicator size="small" color="white" />
+                ) : (
+                  <Ionicons name="arrow-up" size={20} color="white" />
+                )}
+              </TouchableOpacity>
+            )}
           </View>
         </View>
       </KeyboardAvoidingView>

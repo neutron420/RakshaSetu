@@ -5,7 +5,7 @@ import { AppError } from "../utils/app-error";
 import { env } from "../../config/env";
 
 export function errorMiddleware(err: unknown, _req: Request, res: Response, _next: NextFunction): void {
-  // ── Zod validation errors ──
+
   if (err instanceof ZodError) {
     res.status(400).json({
       success: false,
@@ -15,7 +15,7 @@ export function errorMiddleware(err: unknown, _req: Request, res: Response, _nex
     return;
   }
 
-  // ── Application errors ──
+
   if (err instanceof AppError) {
     res.status(err.statusCode).json({
       success: false,
@@ -24,8 +24,7 @@ export function errorMiddleware(err: unknown, _req: Request, res: Response, _nex
     });
     return;
   }
-
-  // ── Prisma known-request errors ──
+  
   if (err instanceof Prisma.PrismaClientKnownRequestError) {
     switch (err.code) {
       case "P2002": {
