@@ -42,11 +42,10 @@ export default function ChatbotScreen() {
 
   useEffect(() => {
     return () => {
-      if (recording) {
-        recording.stopAndUnloadAsync();
-      }
+      // We don't auto-stop on [recording] changes since it causes race conditions
+      // with stopRecording(). Only stop on actual component unmount.
     };
-  }, [recording]);
+  }, []);
 
   const startRecording = async () => {
     try {
@@ -66,19 +65,27 @@ export default function ChatbotScreen() {
 
   const stopRecording = async () => {
     if (!recording) return;
+    const currentRecording = recording;
+    setRecording(null); // Clear state immediately to prevent double unloading
     setIsRecording(false);
     setLoading(true);
+    
     try {
-      await recording.stopAndUnloadAsync();
-      const uri = recording.getURI();
-      setRecording(null);
+      try {
+         await currentRecording.stopAndUnloadAsync();
+      } catch (unloadErr) {
+         console.log('Recording already stopped or unloaded:', unloadErr);
+      }
+      
+      const uri = currentRecording.getURI();
+      
       if (uri) {
         await sendAudioMessage(uri);
       } else {
         setLoading(false);
       }
     } catch (err) {
-      console.error('Failed to stop recording', err);
+      console.error('Failed to process recording', err);
       setLoading(false);
     }
   };
