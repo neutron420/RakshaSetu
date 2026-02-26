@@ -1,4 +1,4 @@
-# ⚡ Managed Redis Implementation Guide for RakshaSetu
+# Managed Redis Implementation Guide for RakshaSetu
 
 This document outlines the **Why**, **What**, and **How** of integrating a Managed Redis service (like Upstash) into the `user-be` package of RakshaSetu. 
 
@@ -6,7 +6,7 @@ By following this guide, we will protect the primary PostgreSQL database from co
 
 ---
 
-## 🧐 1. Why do we need Redis?
+## 1. Why do we need Redis?
 
 When a disaster (like an earthquake) occurs, the usage of the RakshaSetu app will spike from 0 to 10,000+ active users in seconds. 
 During this panic, users will:
@@ -22,7 +22,7 @@ We introduce **Redis** as a caching and rate-limiting layer. Redis stores data e
 
 ---
 
-## 🛠️ 2. What exactly are we building?
+## 2. What exactly are we building?
 
 We will implement three specific systems using Redis:
 
@@ -41,7 +41,7 @@ We will implement three specific systems using Redis:
 
 ---
 
-## 🚀 3. Step-by-Step Implementation Guide
+## 3. Step-by-Step Implementation Guide
 
 Follow these exact steps to implement this in the `user-be` package.
 
@@ -139,5 +139,5 @@ router.post("/fetch-automated", async (req, res, next) => {
 
 ---
 
-## 🎯 Final Outcome
+## Final Outcome
 Once these 5 steps are implemented, the `user-be` package will be highly resilient. During a disaster spike, AWS/Upstash will handle thousands of read requests per second from RAM, keeping your PostgreSQL database and External APIs completely isolated from the traffic surge.
