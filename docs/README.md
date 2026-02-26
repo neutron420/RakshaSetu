@@ -60,7 +60,7 @@ The core components include:
 
 - Real-time SOS & Emergency Beacons: Instantly alert nearby rescue teams and relief centers with your exact location.
 - Incident Reporting: Empower citizens to report disasters, hazards, and infrastructure damage with multimedia support.
-- Early Warning System (EWS): Automated ingestion of disaster data (e.g., USGS earthquakes) and severe weather alerts to notify vulnerable populations proactively.
+- Early Warning System (EWS) & Red Alerts: Automated ingestion of disaster data (e.g., USGS earthquakes) and severe weather alerts. Triggers highly visible **Red Alert Push Notifications** to instantly warn vulnerable populations proactively.
 - Offline Mesh Communication Ready: Designed to work in limited connectivity environments utilizing outbox patterns and Bluetooth Low Energy (BLE) capabilities.
 - Live Tracking & Timeline: Track rescue operations, team assignments, and the timeline of events up to resolution.
 - AI-Powered Assistance: Integrated AI capabilities (via LangChain) to assist users during emergencies.

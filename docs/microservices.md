@@ -78,7 +78,7 @@ graph LR
 
 ### Background Jobs
 - **Outbox Pattern for Resilience**: Ensures no data is lost when connectivity drops. Messages and events are stored in a local outbox and processed reliably when the external connection stabilizes.
-- **Alerts & EWS (Early Warning System)**: Automated ingestion from USGS and weather sources. Targets specific vulnerable populations using the Alert Targeting Worker.
+- **Alerts & EWS (Early Warning System)**: Automated ingestion from USGS and weather sources. Targets specific vulnerable populations using the Alert Targeting Worker to dispatch **Red Alert Push Notifications** (via Expo Push) and WebSockets, ensuring citizens in the danger radius wake up to the threat.
 
 ### WebSocket Real-Time Layer (`/ws`)
 RakshaSetu relies heavily on WebSockets to deliver critical updates instantly. The WebSocket server is integrated directly into `user-be`.

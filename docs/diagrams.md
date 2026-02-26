@@ -159,7 +159,7 @@ sequenceDiagram
     TargetWorker->>DB: Queue Target Notifications
     deactivate TargetWorker
     
-    TargetWorker->>Citizens: WS Broadcast / Push Notifications ("EARTHQUAKE DETECTED. SEEK COVER")
+    TargetWorker->>Citizens: WS Broadcast / Expo Push Notifications ("🔴 RED ALERT: EARTHQUAKE DETECTED. SEEK COVER")
 ```
 
 ---
