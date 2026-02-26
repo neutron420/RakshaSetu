@@ -27,7 +27,7 @@ graph TD
         CitizenApp --> OfflineMaps
     end
 
-    subgraph Service Tier (Node.js/Express)
+    subgraph "Service Tier (Node.js/Express)"
         UserBE[User Backend API]:::backend
         WSServer[WebSocket Server]:::backend
         OutboxWorker[Transactional Outbox Worker]:::backend
@@ -169,12 +169,12 @@ When cellular infrastructure is completely destroyed, the Citizen app relies on 
 
 ```mermaid
 graph LR
-    subgraph No Internet Zone
+    subgraph "No Internet Zone"
         Victim1("Victim📱") -- BLE --> PeerA("Peer A📱")
         PeerA("Peer A📱") -- BLE --> PeerB("Peer B📱")
     end
     
-    subgraph Internet Connectivity Restored
+    subgraph "Internet Connectivity Restored"
         PeerB -- Cellular/WiFi --> API("RakshaSetu Backend")
     end
     
