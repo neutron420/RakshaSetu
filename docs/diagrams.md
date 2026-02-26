@@ -18,10 +18,10 @@ graph TD
 
     %% Nodes
     subgraph Client Tier
-        CitizenApp[Citizen App (Expo/React Native)]:::client
+        CitizenApp["Citizen App (Expo/React Native)"]:::client
         subgraph Real-Time GIS
-            MapboxVis[Mapbox Heatmaps & POIs]:::client
-            OfflineMaps[Offline BLE & Caching]:::client
+            MapboxVis["Mapbox Heatmaps & POIs"]:::client
+            OfflineMaps["Offline BLE & Caching"]:::client
         end
         CitizenApp --> MapboxVis
         CitizenApp --> OfflineMaps
@@ -34,18 +34,18 @@ graph TD
     end
 
     subgraph Messaging Tier
-        Kafka{Apache Kafka Broker}:::messaging
+        Kafka{"Apache Kafka Broker"}:::messaging
     end
 
     subgraph Data Tier
-        DB[(PostgreSQL Database)]:::database
-        Redis[(Redis Cache - Planned)]:::database
+        DB[("PostgreSQL Database")]:::database
+        Redis[("Redis Cache - Planned")]:::database
     end
 
     subgraph External Systems
-        USGS[USGS Earthquake Data API]:::external
+        USGS["USGS Earthquake Data API"]:::external
         WeatherDev[Weather Alert APIs]:::external
-        MapboxAPI[Mapbox Geocoding POI API]:::external
+        MapboxAPI["Mapbox Geocoding POI API"]:::external
     end
 
     %% Connections
@@ -170,16 +170,16 @@ When cellular infrastructure is completely destroyed, the Citizen app relies on 
 ```mermaid
 graph LR
     subgraph No Internet Zone
-        Victim1((Victim📱)) -- BLE --> PeerA((Peer A📱))
-        PeerA -- BLE --> PeerB((Peer B📱))
+        Victim1("Victim📱") -- BLE --> PeerA("Peer A📱")
+        PeerA("Peer A📱") -- BLE --> PeerB("Peer B📱")
     end
     
     subgraph Internet Connectivity Restored
-        PeerB -- Cellular/WiFi --> API(RakshaSetu Backend)
+        PeerB -- Cellular/WiFi --> API("RakshaSetu Backend")
     end
     
     API --> DB[(DB)]
-    API -.-> WS(WebSockets) -.-> Teams(Rescue Teams)
+    API -.-> WS("WebSockets") -.-> Teams("Rescue Teams")
     
     style Victim1 fill:#ffcdd2,stroke:#d32f2f
     style PeerA fill:#fff9c4,stroke:#fbc02d

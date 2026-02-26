@@ -7,32 +7,32 @@ RakshaSetu is a comprehensive disaster management and emergency response platfor
 ```mermaid
 graph TD
     subgraph Client Tier
-        CitizenApp[Citizen App (React Native/Expo)]
+        CitizenApp["Citizen App (React Native/Expo)"]
         subgraph Real-Time GIS
-            MapboxVis[Mapbox Heatmaps & POIs]
-            OfflineMaps[Offline Map Caching]
+            MapboxVis["Mapbox Heatmaps & POIs"]
+            OfflineMaps["Offline Map Caching"]
         end
         CitizenApp --> MapboxVis
         CitizenApp --> OfflineMaps
     end
 
     subgraph Service Tier
-        UserBE[User Backend (Node.js/Express)]
+        UserBE["User Backend (Node.js/Express)"]
     end
 
     subgraph Messaging Tier
-        Kafka[Apache Kafka Broker]
+        Kafka["Apache Kafka Broker"]
     end
 
     subgraph Data Tier
-        DB[(PostgreSQL Database)]
-        Redis[(Redis Cache - Planned)]
+        DB[("PostgreSQL Database")]
+        Redis[("Redis Cache - Planned")]
     end
 
     subgraph External Systems
-        USGS[USGS Earthquake Data]
+        USGS["USGS Earthquake Data"]
         WeatherDev[Weather APIs]
-        MapboxAPI[Mapbox Geocoding & POI API]
+        MapboxAPI["Mapbox Geocoding & POI API"]
     end
 
     CitizenApp <-->|REST API & WebSockets| UserBE
