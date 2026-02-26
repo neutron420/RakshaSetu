@@ -50,7 +50,6 @@ export function errorMiddleware(err: unknown, _req: Request, res: Response, _nex
     }
   }
 
-  // ── Prisma validation errors ──
   if (err instanceof Prisma.PrismaClientValidationError) {
     res.status(400).json({
       success: false,
@@ -59,7 +58,6 @@ export function errorMiddleware(err: unknown, _req: Request, res: Response, _nex
     return;
   }
 
-  // ── Catch-all ──
   const message = err instanceof Error ? err.message : "Internal server error";
 
   if (env.nodeEnv !== "test") {
