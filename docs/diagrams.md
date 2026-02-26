@@ -61,8 +61,8 @@ graph TD
     Kafka -->|Consumes Async Tasks| UserBE
     
     %% External Ingestions
-    USGS -->|Cron Polling (EWS)| UserBE
-    WeatherDev -->|Cron Polling (EWS)| UserBE
+    USGS -->|Cron Polling EWS| UserBE
+    WeatherDev -->|Cron Polling EWS| UserBE
     UserBE -->|Fetches Hospitals/Shelters| MapboxAPI
     MapboxAPI -->|POI Data| UserBE
 ```
