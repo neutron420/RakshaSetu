@@ -11,10 +11,11 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { useRouter, useFocusEffect } from 'expo-router';
-import { listIncidentsApi, Incident, SosCategory, IncidentPriority } from '../../services/api';
+import { Incident, SosCategory, IncidentPriority } from '../../services/api';
 import { getUser } from '../../services/auth-store';
 import { socketService } from '../../services/socket';
 import { Image } from 'expo-image';
+import { getCachedIncidents, refreshLatestIncidents } from '../../services/offline-data';
 
 const CATEGORY_CONFIG: Record<SosCategory, { icon: keyof typeof Ionicons.glyphMap; color: string }> = {
   FLOOD: { icon: 'water', color: '#1E88E5' },
@@ -57,12 +58,20 @@ export default function HomeScreen() {
   const [error, setError] = useState('');
 
   const fetchIncidents = useCallback(async () => {
+    let cached: Incident[] = [];
     try {
       setError('');
-      const res = await listIncidentsApi({ limit: 20 });
-      setIncidents(res.data || []);
+      cached = await getCachedIncidents(20);
+      if (cached.length > 0) {
+        setIncidents(cached);
+      }
+      await refreshLatestIncidents(100);
+      const latest = await getCachedIncidents(20);
+      setIncidents(latest);
     } catch (err: any) {
-      setError(err.message || 'Failed to load incidents');
+      if (cached.length === 0) {
+        setError(err.message || 'Failed to load incidents');
+      }
     }
   }, []);
 

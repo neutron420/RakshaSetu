@@ -12,7 +12,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { useRouter } from 'expo-router';
 import {
-  listIncidentsApi,
   toggleUpvoteApi,
   batchGetUpvotesApi,
   Incident,
@@ -24,6 +23,7 @@ import { socketService } from '../../services/socket';
 import EmergencyCallSheet from '../../components/EmergencyCallSheet';
 import { Image } from 'expo-image';
 import { Share } from 'react-native';
+import { getCachedIncidents, refreshLatestIncidents } from '../../services/offline-data';
 
 const CATEGORY_CONFIG: Record<SosCategory, { icon: keyof typeof Ionicons.glyphMap; color: string; label: string }> = {
   FLOOD: { icon: 'water', color: '#1E88E5', label: 'Flood' },
@@ -69,10 +69,15 @@ export default function CommunityScreen() {
   const [callSheetVisible, setCallSheetVisible] = useState(false);
 
   const fetchIncidents = useCallback(async () => {
+    let items: Incident[] = [];
     try {
       setError('');
-      const res = await listIncidentsApi({ limit: 50 });
-      const items = res.data || [];
+      items = await getCachedIncidents(50);
+      if (items.length > 0) {
+        setIncidents(items);
+      }
+      await refreshLatestIncidents(120);
+      items = await getCachedIncidents(50);
       setIncidents(items);
 
       // Fetch upvote data for all loaded incidents
@@ -90,7 +95,9 @@ export default function CommunityScreen() {
         }
       }
     } catch (err: any) {
-      setError(err.message || 'Failed to load community alerts');
+      if (items.length === 0) {
+        setError(err.message || 'Failed to load community alerts');
+      }
     }
   }, []);
 

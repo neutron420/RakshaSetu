@@ -4,8 +4,14 @@ import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import MapView, { Marker } from 'react-native-maps';
 import * as Location from 'expo-location';
-import { getNearbyReliefCentersApi, ReliefCenter, ReliefCenterType, ReliefCenterStatus, Incident, getNearbyIncidentsApi, fetchAutomatedReliefCentersApi } from '../../services/api';
+import { ReliefCenter, ReliefCenterType, ReliefCenterStatus, Incident, fetchAutomatedReliefCentersApi } from '../../services/api';
 import { socketService } from '../../services/socket';
+import {
+  getCachedNearbyIncidents,
+  getCachedNearbyReliefCenters,
+  refreshNearbySnapshot,
+  updateCachedReliefCenter,
+} from '../../services/offline-data';
 
 const TYPE_CONFIG: Record<ReliefCenterType, { icon: keyof typeof Ionicons.glyphMap; color: string; label: string }> = {
   SHELTER: { icon: 'home', color: '#1A73E8', label: 'Shelter' },
@@ -59,6 +65,10 @@ export default function ExploreScreen() {
     })();
 
     const unsubscribe = socketService.on('relief-center:update', (payload: { id: string; status?: ReliefCenterStatus; currentCount?: number }) => {
+      void updateCachedReliefCenter(payload.id, {
+        status: payload.status,
+        currentCount: payload.currentCount,
+      });
       setCenters(prev => prev.map(c => c.id === payload.id ? { ...c, status: payload.status ?? c.status, currentCount: payload.currentCount ?? c.currentCount } as ReliefCenter : c));
     });
 
@@ -66,17 +76,29 @@ export default function ExploreScreen() {
   }, []);
 
   async function fetchData(lat: number, lng: number) {
+    let cachedCenters: ReliefCenter[] = [];
+    let cachedIncidents: Incident[] = [];
     try {
-      const [resCenters, resIncidents] = await Promise.all([
-        getNearbyReliefCentersApi({ latitude: lat, longitude: lng, radiusMeters: 30000 }),
-        getNearbyIncidentsApi({ latitude: lat, longitude: lng, radiusMeters: 30000 })
+      [cachedCenters, cachedIncidents] = await Promise.all([
+        getCachedNearbyReliefCenters(lat, lng, 30000),
+        getCachedNearbyIncidents(lat, lng, 30000),
       ]);
-      setCenters(resCenters.data || []);
-      setIncidents(resIncidents.data || []);
+
+      if (cachedCenters.length > 0) setCenters(cachedCenters);
+      if (cachedIncidents.length > 0) setIncidents(cachedIncidents);
+
+      await refreshNearbySnapshot(lat, lng, 30000);
+
+      const [latestCenters, latestIncidents] = await Promise.all([
+        getCachedNearbyReliefCenters(lat, lng, 30000),
+        getCachedNearbyIncidents(lat, lng, 30000),
+      ]);
+      setCenters(latestCenters);
+      setIncidents(latestIncidents);
     } catch (err) {
       console.error('Fetch data error:', err);
-      setCenters([]);
-      setIncidents([]);
+      if (cachedCenters.length === 0) setCenters([]);
+      if (cachedIncidents.length === 0) setIncidents([]);
     }
   }
 

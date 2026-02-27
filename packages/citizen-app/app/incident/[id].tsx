@@ -24,6 +24,7 @@ import {
   IncidentMedia,
 } from '../../services/api';
 import { Image } from 'expo-image';
+import { cacheIncidents, getCachedIncidentById } from '../../services/offline-data';
 
 const CATEGORY_CONFIG: Record<SosCategory, { icon: keyof typeof Ionicons.glyphMap; color: string; label: string }> = {
   FLOOD: { icon: 'water', color: '#1E88E5', label: 'Flood' },
@@ -89,18 +90,39 @@ export default function IncidentDetailScreen() {
   useEffect(() => {
     if (!id) return;
     (async () => {
+      let cachedIncident: Incident | null = null;
       try {
-        const [incRes, upRes, medRes] = await Promise.all([
-          getIncidentByIdApi(id),
-          getUpvoteInfoApi(id),
-          getIncidentMediaApi(id),
-        ]);
-        setIncident(incRes.data);
-        setUpvote(upRes.data);
-        setMedia(medRes.data || []);
+        cachedIncident = await getCachedIncidentById(id);
+        if (cachedIncident) {
+          setIncident(cachedIncident);
+        }
+
+        try {
+          const incRes = await getIncidentByIdApi(id);
+          setIncident(incRes.data);
+          await cacheIncidents([incRes.data]);
+        } catch (err: any) {
+          if (!cachedIncident) throw err;
+        }
+
+        try {
+          const upRes = await getUpvoteInfoApi(id);
+          setUpvote(upRes.data);
+        } catch {
+          // Upvotes are optional when offline.
+        }
+
+        try {
+          const medRes = await getIncidentMediaApi(id);
+          setMedia(medRes.data || []);
+        } catch {
+          // Media can be unavailable offline.
+        }
       } catch (err: any) {
         console.error('Failed to load incident details:', err);
-        setError(err.message || 'Failed to load incident details');
+        if (!cachedIncident) {
+          setError(err.message || 'Failed to load incident details');
+        }
       } finally {
         setLoading(false);
       }

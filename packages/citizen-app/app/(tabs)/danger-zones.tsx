@@ -4,8 +4,13 @@ import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import MapView, { Heatmap, Marker } from 'react-native-maps';
 import * as Location from 'expo-location';
-import { Incident, getNearbyIncidentsApi } from '../../services/api';
+import { Incident } from '../../services/api';
 import { socketService } from '../../services/socket';
+import {
+  cacheIncidents,
+  getCachedNearbyIncidents,
+  refreshNearbyIncidents,
+} from '../../services/offline-data';
 
 const DEFAULT_REGION = {
   latitude: 28.6139,
@@ -49,6 +54,7 @@ export default function DangerZonesScreen() {
     })();
 
     const unsubscribe = socketService.on('incident:new', (incident: Incident) => {
+      void cacheIncidents([incident]);
       setIncidents(prev => [incident, ...prev]);
     });
 
@@ -56,12 +62,20 @@ export default function DangerZonesScreen() {
   }, []);
 
   async function fetchIncidents(lat: number, lng: number) {
+    let cached: Incident[] = [];
     try {
-      const resIncidents = await getNearbyIncidentsApi({ latitude: lat, longitude: lng, radiusMeters: 50000 });
-      setIncidents(resIncidents.data || []);
+      cached = await getCachedNearbyIncidents(lat, lng, 50000);
+      if (cached.length > 0) {
+        setIncidents(cached);
+      }
+      await refreshNearbyIncidents(lat, lng, 50000);
+      const latest = await getCachedNearbyIncidents(lat, lng, 50000);
+      setIncidents(latest);
     } catch (err) {
       console.error('Fetch incidents error:', err);
-      setIncidents([]);
+      if (cached.length === 0) {
+        setIncidents([]);
+      }
     }
   }
 

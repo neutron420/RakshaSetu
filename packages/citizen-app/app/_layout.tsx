@@ -5,7 +5,6 @@ import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
 
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import * as Notifications from 'expo-notifications';
 import Constants, { ExecutionEnvironment } from 'expo-constants';
 import { socketService } from '@/services/socket';
 import { RedAlertModal } from '@/components/alerts/RedAlertModal';
@@ -13,6 +12,7 @@ import { startBackgroundLocationUpdates } from '@/services/location-background';
 import { requestBlePermissions } from '@/services/ble-mesh/permissions';
 import { startBackgroundBLEScanner, stopBLEScanner } from '@/services/ble-mesh/scanner';
 import { ChatFab } from '@/components/ChatFab';
+import { bootstrapOfflineData } from '@/services/offline-data';
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
@@ -26,6 +26,8 @@ export default function RootLayout() {
   });
 
   useEffect(() => {
+    void bootstrapOfflineData();
+
     // ── WebSocket Alert Listener (Works in Expo Go!) ──
     const handleAlert = (payload: any) => {
       console.log('🚨 [EWS] Received Emergency Alert via WebSocket:', payload);
@@ -55,12 +57,14 @@ export default function RootLayout() {
     const offOutbox = socketService.on('outbox:NaturalDisasterAlert', handleOutboxAlert);
 
     const isExpoGo = Constants.executionEnvironment === ExecutionEnvironment.StoreClient;
+    let notificationCleanup: (() => void) | null = null;
 
     if (isExpoGo) {
       console.log('Skipping push notification and background location setup in Expo Go.');
       return () => {
         offEmergency();
         offLegacy();
+        offOutbox();
       };
     }
 
@@ -78,23 +82,30 @@ export default function RootLayout() {
     });
 
     // Listen for incoming notifications
-    const subscription = Notifications.addNotificationReceivedListener(notification => {
-      const { data } = notification.request.content;
-      
-      // Check if it's a Natural Disaster Alert from our EWS
-      if (data && data.type === 'NATURAL_DISASTER') {
-        const payload = data as any;
-        setAlertData({
-          type: payload.disasterType || 'Earthquake',
-          location: payload.location?.name || 'Your Area',
-          severity: payload.severity || 'high'
+    void import('expo-notifications')
+      .then((Notifications) => {
+        const subscription = Notifications.addNotificationReceivedListener(notification => {
+          const { data } = notification.request.content;
+          
+          // Check if it's a Natural Disaster Alert from our EWS
+          if (data && data.type === 'NATURAL_DISASTER') {
+            const payload = data as any;
+            setAlertData({
+              type: payload.disasterType || 'Earthquake',
+              location: payload.location?.name || 'Your Area',
+              severity: payload.severity || 'high'
+            });
+            setAlertVisible(true);
+          }
         });
-        setAlertVisible(true);
-      }
-    });
+        notificationCleanup = () => subscription.remove();
+      })
+      .catch((error) => {
+        console.warn('[notifications] listener setup failed:', error);
+      });
 
     return () => {
-      subscription.remove();
+      notificationCleanup?.();
       offEmergency();
       offLegacy();
       offOutbox();
