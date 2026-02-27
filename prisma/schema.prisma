@@ -279,7 +279,7 @@ model IncidentStatusEvent {
 model EventOutboxMessage {
   id            String             @id @default(uuid()) @db.Uuid
   aggregateType String             @db.VarChar(50)
-  aggregateId   String             @db.Uuid
+  aggregateId   String             @db.VarChar(120)
   eventType     String             @db.VarChar(80)
   partitionKey  String             @db.VarChar(120)
   payload       Json

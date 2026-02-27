@@ -5,7 +5,6 @@ import cors from "cors";
 import express from "express";
 import helmet from "helmet";
 import morgan from "morgan";
-// Load env first so KAFKA_* etc are available to @rakshasetu/kafka
 import { env } from "./config/env";
 import { connectProducer, disconnectProducer, initTopics } from "@rakshasetu/kafka";
 import { prisma } from "./common/db/prisma";
@@ -16,6 +15,8 @@ import { initWebSocket, getConnectedCount } from "./ws";
 import rateLimit from "express-rate-limit";
 import RedisStore from "rate-limit-redis";
 import { redisClient, connectRedis } from "./common/db/redis";
+
+await connectRedis();
 
 const app = express();
 
@@ -37,8 +38,8 @@ app.get("/health", (_req, res) => {
 
 // Configure Redis-backed Rate Limiting
 const globalLimiter = rateLimit({
-  windowMs: 60 * 1000, // 1 minute
-  max: 300,            // Limit each IP to 300 requests per minute
+  windowMs: 60 * 1000, 
+  max: 300,            
   standardHeaders: true,
   legacyHeaders: false,
   message: { success: false, message: "Too many requests. Please try again later." },
@@ -75,7 +76,6 @@ httpServer.listen(env.port, async () => {
   await connectProducer().catch((err: unknown) => {
     console.warn("[kafka] producer connect failed (events will still go to WebSocket):", err instanceof Error ? err.message : err);
   });
-  await connectRedis(); // Initialize our Redis memory connection
   console.log(`user-be running on port ${env.port}`);
 });
 

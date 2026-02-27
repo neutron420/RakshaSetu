@@ -1,12 +1,43 @@
 import { runConsumer, TOPICS } from "@rakshasetu/kafka";
+import { createHash } from "node:crypto";
 import { prisma } from "../../common/db/prisma";
 import { sendNotificationToUsers } from "../../common/services/notification.service";
 
+const UUID_REGEX =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+function toDeterministicUuid(input: string): string {
+  const hash = createHash("sha256")
+    .update(`natural-disaster:${input}`)
+    .digest("hex");
+
+  const timeLow = hash.slice(0, 8);
+  const timeMid = hash.slice(8, 12);
+  const timeHighAndVersion = `5${hash.slice(13, 16)}`;
+  const clockSeqHigh = (
+    (parseInt(hash.slice(16, 18), 16) & 0x3f) |
+    0x80
+  )
+    .toString(16)
+    .padStart(2, "0");
+  const clockSeqLow = hash.slice(18, 20);
+  const node = hash.slice(20, 32);
+
+  return `${timeLow}-${timeMid}-${timeHighAndVersion}-${clockSeqHigh}${clockSeqLow}-${node}`;
+}
+
+function getIncidentIdFromAggregateId(aggregateId: string): string {
+  if (UUID_REGEX.test(aggregateId)) {
+    return aggregateId;
+  }
+  return toDeterministicUuid(aggregateId);
+}
+
 export async function startAlertTargetingWorker() {
-  const maxRetries = 20; // Increased for better patience
+  const maxRetries = 20; 
   let retries = 0;
 
-  while (true) { // Infinite loop for self-healing
+  while (true) { 
     try {
       const consumer = await runConsumer(
         "alert-targeting-group",
@@ -25,15 +56,30 @@ export async function startAlertTargetingWorker() {
       try {
 
         const radiusMeters = (payload.magnitude ?? 5) * 20000; 
+        const sourceAggregateId =
+          typeof aggregateId === "string" && aggregateId.trim().length > 0
+            ? aggregateId
+            : `${payload.alertType ?? "DISASTER"}:${payload.happenedAt ?? ""}:${
+                payload.latitude
+              }:${payload.longitude}:${payload.title ?? ""}`;
+
+        if (typeof aggregateId !== "string" || aggregateId.trim().length === 0) {
+          console.warn(
+            "[alert-worker] Received disaster event without aggregateId. Using payload-based fallback for incident ID."
+          );
+        }
+        const incidentId = getIncidentIdFromAggregateId(sourceAggregateId);
         
         // 1. Check if an incident already exists for this exact disaster event ID
         // (to prevent duplicates if Kafka replays the message)
         const existingIncident = await prisma.incident.findUnique({
-          where: { id: aggregateId } // Using aggregateId as the Incident ID
+          where: { id: incidentId }
         });
         
         if (!existingIncident) {
-          console.log(`[alert-worker] Creating Incident record for weather event: ${aggregateId}`);
+          console.log(
+            `[alert-worker] Creating Incident record for disaster event ${sourceAggregateId} as ${incidentId}`
+          );
           
           let category: "FLOOD" | "FIRE" | "EARTHQUAKE" | "ACCIDENT" | "MEDICAL" | "VIOLENCE" | "LANDSLIDE" | "CYCLONE" | "OTHER" = "OTHER";
           const titleLower = (payload.title || "").toLowerCase();
@@ -69,7 +115,7 @@ export async function startAlertTargetingWorker() {
               "createdAt", 
               "updatedAt"
             ) VALUES (
-              ${aggregateId}::uuid, 
+              ${incidentId}::uuid, 
               ${category}::"SosCategory", 
               'OPEN'::"IncidentStatus", 
               ${severityMapping}::"IncidentPriority", 
@@ -86,7 +132,7 @@ export async function startAlertTargetingWorker() {
             ON CONFLICT ("id") DO NOTHING;
           `;
         } else {
-             console.log(`[alert-worker] Incident already exists for ${aggregateId}, skipping creation.`);
+             console.log(`[alert-worker] Incident already exists for ${incidentId}, skipping creation.`);
         }
 
         const impactedUsers = await prisma.$queryRaw<{ id: string }[]>`
@@ -111,7 +157,8 @@ export async function startAlertTargetingWorker() {
             `A ${payload.title || 'Severe Event'} has been detected at ${payload.place || 'your area'}. Take immediate shelter if you are in a danger zone.`,
             {
               type: "NATURAL_DISASTER",
-              disasterId: aggregateId,
+              disasterId: incidentId,
+              sourceDisasterId: sourceAggregateId,
               severity: payload.severity,
               location: { lat: payload.latitude, lng: payload.longitude }
             }

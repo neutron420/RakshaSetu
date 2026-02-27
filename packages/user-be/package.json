@@ -10,7 +10,9 @@
     "prisma:generate": "prisma generate --config ../../prisma.config.ts"
   },
   "dependencies": {
+    "@aws-sdk/client-polly": "^3.999.0",
     "@aws-sdk/client-s3": "^3.993.0",
+    "@aws-sdk/client-transcribe-streaming": "^3.999.0",
     "@aws-sdk/s3-request-presigner": "^3.993.0",
     "@langchain/core": "^1.1.28",
     "@langchain/openai": "^1.2.10",

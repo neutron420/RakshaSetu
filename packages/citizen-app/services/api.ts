@@ -1,7 +1,7 @@
 import { getToken } from './auth-store';
 
 export const BASE_URL = __DEV__
-  ? 'http://10.52.205.187:5001/api/v1'
+  ? 'http://172.29.21.53:5001/api/v1'
   : 'https://your-production-api.com/api/v1';
 
 type ApiResponse<T = unknown> = {
