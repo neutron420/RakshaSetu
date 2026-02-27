@@ -29,9 +29,9 @@ graph TD
     end
 
     %% Flow
-    UI -->|Reads instantly (0.001s)| WDB
-    WDB -->|Background Sync (when online)| API
-    API -->|Reads/Writes| DB
+    UI -->|Reads instantly 0.001s| WDB
+    WDB -->|Background Sync when online| API
+    API -->|Reads / Writes| DB
     
     classDef offline fill:#e8f5e9,stroke:#43a047
     classDef online fill:#e1f5fe,stroke:#039be5
