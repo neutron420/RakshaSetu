@@ -3,6 +3,7 @@ import { authMiddleware } from "../../common/middleware/auth.middleware";
 import { validateBody, validateQuery } from "../../common/middleware/validate.middleware";
 import { nearbyCentersQuerySchema, createReliefCenterSchema, updateReliefCenterSchema } from "./relief-centers.schema";
 import { addReliefCenter, getNearbyCenters, getCenterDetails, updateCenterStatus, fetchAndSaveReliefCenters } from "./relief-centers.service";
+import { redisClient } from "../../common/db/redis";
 
 const router = Router();
 
@@ -20,7 +21,22 @@ router.post("/fetch-automated", async (req, res, next) => {
       return res.status(400).json({ success: false, message: "latitude and longitude are required in body" });
     }
 
+    // 1. Create a cache key rounded to 2 decimal places so users near each other share the POI response
+    const latRounded = Number(latitude).toFixed(2);
+    const lngRounded = Number(longitude).toFixed(2);
+    const cacheKey = `poi:hospitals:${latRounded}:${lngRounded}`;
+
+    const cachedPOI = await redisClient.get(cacheKey);
+    if (cachedPOI) {
+      console.log(`[Cache Hit] Serving relief POIs for area ${latRounded},${lngRounded} directly from RAM!`);
+      return res.json({ success: true, data: JSON.parse(cachedPOI) });
+    }
+
     const result = await fetchAndSaveReliefCenters(Number(latitude), Number(longitude), radiusMeters ? Number(radiusMeters) : 30000);
+    
+    // Save to Redis for 10 minutes (600 seconds)
+    await redisClient.setEx(cacheKey, 600, JSON.stringify(result));
+
     res.json({ success: true, data: result });
   } catch (error) {
     next(error);

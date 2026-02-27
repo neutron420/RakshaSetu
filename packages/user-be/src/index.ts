@@ -13,6 +13,9 @@ import { errorMiddleware } from "./common/middleware/error.middleware";
 import { notFoundMiddleware } from "./common/middleware/not-found.middleware";
 import { apiRouter } from "./routes";
 import { initWebSocket, getConnectedCount } from "./ws";
+import rateLimit from "express-rate-limit";
+import RedisStore from "rate-limit-redis";
+import { redisClient, connectRedis } from "./common/db/redis";
 
 const app = express();
 
@@ -32,6 +35,21 @@ app.get("/health", (_req, res) => {
   });
 });
 
+// Configure Redis-backed Rate Limiting
+const globalLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 300,            // Limit each IP to 300 requests per minute
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, message: "Too many requests. Please try again later." },
+  store: new RedisStore({
+    sendCommand: (...args: string[]) => redisClient.sendCommand(args),
+  }),
+});
+
+// Apply rate limiter to all API routes
+app.use("/api/", globalLimiter);
+
 app.use("/api/v1", apiRouter);
 app.use(notFoundMiddleware);
 app.use(errorMiddleware);
@@ -44,7 +62,6 @@ import { pollDisasterEvents } from "./modules/alerts/disaster-ingestion.service"
 import { pollWeatherAlerts } from "./modules/alerts/weather-ingestion.service";
 import { startAlertTargetingWorker } from "./modules/alerts/alert-targeting.worker";
 
-// Suppress KafkaJS internal TimeoutNegativeWarning (known bug in kafkajs)
 process.removeAllListeners("warning");
 process.on("warning", (warning) => {
   if (warning.name === "TimeoutNegativeWarning") return;
@@ -58,6 +75,7 @@ httpServer.listen(env.port, async () => {
   await connectProducer().catch((err: unknown) => {
     console.warn("[kafka] producer connect failed (events will still go to WebSocket):", err instanceof Error ? err.message : err);
   });
+  await connectRedis(); // Initialize our Redis memory connection
   console.log(`user-be running on port ${env.port}`);
 });
 
