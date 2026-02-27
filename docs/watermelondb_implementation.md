@@ -18,12 +18,12 @@ To prevent this, we change the app to an **Offline-First** architecture.
 
 ```mermaid
 graph TD
-    subgraph Offline Survival Zone (Citizen App)
+    subgraph "Offline Survival Zone (Citizen App)"
         UI[React Native UI]
         WDB[(WatermelonDB Local SQLite)]
     end
     
-    subgraph Cloud Infrastructure (Online Only)
+    subgraph "Cloud Infrastructure (Online Only)"
         API[User-BE Express API]
         DB[(PostgreSQL)]
     end
