@@ -55,11 +55,11 @@ graph TD
         WSServer -->|Parse Payload| LocationService[Location Service]
     end
 
-    RateLimit -.->|Increment IP Counter| RedisStore[(Redis: Upstash)]:::redis
-    LocationService -.->|SETEX live-loc:{id}| RedisStore
+    RateLimit -.->|"Increment IP Counter"| RedisStore[(Redis: Upstash)]:::redis
+    LocationService -.->|"SETEX live-loc:{id}"| RedisStore
     
-    APIRoutes -->|Persistent Read/Write| PostgresDB[(PostgreSQL + PostGIS)]:::pg
+    APIRoutes -->|"Persistent Read/Write"| PostgresDB[(PostgreSQL + PostGIS)]:::pg
     
-    ResponderApp(Responder Dashboard):::client -->|WebSocket: location:subscribe| WSServer
-    WSServer -.->|GET live-loc:{id}| RedisStore
+    ResponderApp(Responder Dashboard):::client -->|"WebSocket: location:subscribe"| WSServer
+    WSServer -.->|"GET live-loc:{id}"| RedisStore
 ```
