@@ -92,6 +92,19 @@ enum ReliefCenterStatus {
   INACTIVE
 }
 
+enum VolunteerSkill {
+  CPR
+  MEDICAL_DOCTOR
+  FIREFIGHTER
+  SEARCH_AND_RESCUE
+  CLIMBING
+  SWIMMING
+  GENERAL_FIRST_AID
+  HEAVY_MACHINERY
+  MENTAL_HEALTH
+  OTHER
+}
+
 model User {
   id                  String                                 @id @default(uuid()) @db.Uuid
   email               String?                                @unique @db.VarChar(255)
@@ -100,6 +113,8 @@ model User {
   fullName            String                                 @db.VarChar(120)
   role                UserRole
   isActive            Boolean                                @default(true)
+  isVolunteer         Boolean                                @default(false)
+  skills              VolunteerSkill[]
   lastSeenAt          DateTime?                              @db.Timestamptz(6)
   pushToken           String?                                @db.VarChar(255)
   lastLat             Decimal?                               @db.Decimal(9, 6)

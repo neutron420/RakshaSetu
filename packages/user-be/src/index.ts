@@ -62,6 +62,7 @@ import { processOutbox } from "./modules/outbox/outbox.service";
 import { pollDisasterEvents } from "./modules/alerts/disaster-ingestion.service";
 import { pollWeatherAlerts } from "./modules/alerts/weather-ingestion.service";
 import { startAlertTargetingWorker } from "./modules/alerts/alert-targeting.worker";
+import { startDispatchWorker } from "./modules/dispatch/dispatch.worker";
 
 process.removeAllListeners("warning");
 process.on("warning", (warning) => {
@@ -94,6 +95,7 @@ setTimeout(() => {
 setTimeout(() => {
   console.log("[EWS] Starting disaster ingestion and targeting worker...");
   void startAlertTargetingWorker().catch(err => console.error("[EWS] Targeting worker failed:", err));
+  void startDispatchWorker().catch(err => console.error("[dispatch] Worker failed:", err));
   
   // Poll USGS every 10 minutes
   void pollDisasterEvents();

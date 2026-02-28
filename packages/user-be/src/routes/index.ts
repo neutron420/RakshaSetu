@@ -9,6 +9,7 @@ import { timelineRouter } from "./timeline.routes";
 import { usersRouter } from "./users.routes";
 import { chatRouter } from "./chat.routes";
 import { reliefCentersRouter } from "../modules/relief-centers/relief-centers.controller";
+import { dispatchRouter } from "../modules/dispatch/dispatch.routes";
 import { broadcast } from "../ws";
 import { pollWeatherAlerts } from "../modules/alerts/weather-ingestion.service";
 
@@ -41,5 +42,6 @@ apiRouter.use("/sos", bleRelayRouter);
 apiRouter.use("/incidents", incidentsRouter);
 apiRouter.use("/teams", teamsRouter);
 apiRouter.use("/relief-centers", reliefCentersRouter);
+apiRouter.use("/dispatch", dispatchRouter);
 apiRouter.use("/", assignmentsRouter);   // /incidents/:id/assign, /assignments/*
 apiRouter.use("/", timelineRouter);      // /incidents/:id/timeline
