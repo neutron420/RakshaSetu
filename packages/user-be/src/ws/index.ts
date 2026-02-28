@@ -2,6 +2,7 @@ import type { Server as HttpServer } from "node:http";
 import { WebSocketServer, WebSocket } from "ws";
 import jwt from "jsonwebtoken";
 import { env } from "../config/env";
+import { getUserLatestLocation, setUserLatestLocation } from "./location.service";
 
 interface AuthenticatedSocket extends WebSocket {
   userId: string;
@@ -16,6 +17,8 @@ interface WsMessage {
 }
 
 const clients = new Map<string, Set<AuthenticatedSocket>>();
+// targetUserId -> Set of sockets actively watching that user
+const locationSubscribers = new Map<string, Set<AuthenticatedSocket>>();
 
 let wss: WebSocketServer;
 
@@ -78,11 +81,11 @@ export function initWebSocket(server: HttpServer) {
     });
 
 
-    ws.on("message", (raw) => {
+    ws.on("message", async (raw) => {
       try {
         const msg = JSON.parse(raw.toString()) as WsMessage;
-        handleMessage(ws, msg);
-      } catch {
+        await handleMessage(ws, msg);
+      } catch (err) {
         send(ws, { type: "error", payload: { message: "Invalid JSON" } });
       }
     });
@@ -94,6 +97,12 @@ export function initWebSocket(server: HttpServer) {
         userSockets.delete(ws);
         if (userSockets.size === 0) clients.delete(ws.userId);
       }
+      
+      // Cleanup: remove this socket from any location subscriptions
+      for (const subscribers of locationSubscribers.values()) {
+        subscribers.delete(ws);
+      }
+
       console.log(`[ws] disconnected: ${ws.userId}`);
     });
   });
@@ -102,15 +111,72 @@ export function initWebSocket(server: HttpServer) {
   return wss;
 }
 
-function handleMessage(ws: AuthenticatedSocket, msg: WsMessage) {
+async function handleMessage(ws: AuthenticatedSocket, msg: WsMessage) {
   switch (msg.type) {
     case "ping":
       send(ws, { type: "pong" });
       break;
 
-    case "location:update":
+    case "location:subscribe": {
+      const { targetUserId } = (msg.payload as { targetUserId?: string }) || {};
+      if (!targetUserId) {
+        return send(ws, { type: "error", payload: { message: "targetUserId required" } });
+      }
 
+      if (!locationSubscribers.has(targetUserId)) {
+        locationSubscribers.set(targetUserId, new Set());
+      }
+      locationSubscribers.get(targetUserId)!.add(ws);
+      
+      console.log(`[ws] User ${ws.userId} subscribed to live location of ${targetUserId}`);
+
+      // Immediately send last known location if available
+      const lastLoc = await getUserLatestLocation(targetUserId);
+      if (lastLoc) {
+        send(ws, {
+          type: "location:update",
+          payload: { userId: targetUserId, ...lastLoc },
+        });
+      }
       break;
+    }
+
+    case "location:unsubscribe": {
+      const { targetUserId } = (msg.payload as { targetUserId?: string }) || {};
+      if (targetUserId && locationSubscribers.has(targetUserId)) {
+        locationSubscribers.get(targetUserId)!.delete(ws);
+        console.log(`[ws] User ${ws.userId} unsubscribed from live location of ${targetUserId}`);
+      }
+      break;
+    }
+
+    case "location:update": {
+      const payload = msg.payload as any;
+      if (!payload || typeof payload.latitude !== "number" || typeof payload.longitude !== "number") {
+        return send(ws, { type: "error", payload: { message: "Invalid location payload" } });
+      }
+
+      // Save to Redis
+      const locationData = await setUserLatestLocation(ws.userId, {
+        latitude: payload.latitude,
+        longitude: payload.longitude,
+        heading: payload.heading,
+        speed: payload.speed,
+      });
+
+      // Broadcast to all active subscribers watching this user
+      const subscribers = locationSubscribers.get(ws.userId);
+      if (subscribers && subscribers.size > 0) {
+        const broadcastPayload = {
+          type: "location:update",
+          payload: { userId: ws.userId, ...locationData },
+        };
+        for (const subscriberWs of subscribers) {
+          send(subscriberWs, broadcastPayload);
+        }
+      }
+      break;
+    }
 
     default:
       send(ws, { type: "error", payload: { message: `Unknown type: ${msg.type}` } });
