@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Pressable, ActivityIndicator, Platform, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
@@ -40,6 +40,12 @@ export default function ExploreScreen() {
   // Dispatch Tracking
   const [responderLoc, setResponderLoc] = useState<{ latitude: number, longitude: number } | null>(null);
   const [isDispatchActive, setIsDispatchActive] = useState(false);
+  const isDispatchActiveRef = useRef(isDispatchActive);
+
+  // Keep the ref in sync with the state
+  useEffect(() => {
+    isDispatchActiveRef.current = isDispatchActive;
+  }, [isDispatchActive]);
 
   useEffect(() => {
     (async () => {
@@ -88,7 +94,7 @@ export default function ExploreScreen() {
     });
 
     const offLocUpdate = socketService.on('location:update', (payload: any) => {
-      if (isDispatchActive) {
+      if (isDispatchActiveRef.current) {
         setResponderLoc({
           latitude: payload.latitude,
           longitude: payload.longitude
@@ -101,7 +107,7 @@ export default function ExploreScreen() {
       offDispatchAccept();
       offLocUpdate();
     }
-  }, [isDispatchActive]);
+  }, []);
 
   async function fetchData(lat: number, lng: number) {
     let cachedCenters: ReliefCenter[] = [];
