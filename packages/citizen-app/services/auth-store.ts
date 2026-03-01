@@ -17,6 +17,7 @@ export type StoredUser = {
   fullName: string;
   phone: string | null;
   role: string;
+  isVolunteer?: boolean;
 };
 
 // Web fallback (SecureStore only works on iOS/Android)

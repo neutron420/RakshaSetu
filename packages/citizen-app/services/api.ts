@@ -46,6 +46,8 @@ export type AuthUser = {
   fullName: string;
   phone: string | null;
   role: string;
+  isVolunteer?: boolean;
+  skills?: string[];
 };
 
 export type AuthResponse = {
@@ -216,6 +218,8 @@ export type UserProfile = {
   phone: string | null;
   role: string;
   isActive: boolean;
+  isVolunteer?: boolean;
+  skills?: string[];
   createdAt: string;
 };
 
@@ -231,6 +235,7 @@ export function patchMeApi(body: {
   pushToken?: string;
   latitude?: number;
   longitude?: number;
+  isVolunteer?: boolean;
 }) {
   return request<UserProfile>('/users/me', {
     method: 'PATCH',

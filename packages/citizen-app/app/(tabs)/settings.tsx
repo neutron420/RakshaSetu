@@ -26,6 +26,7 @@ export default function SettingsScreen() {
   const [editPhone, setEditPhone] = useState('');
 
   // Settings State
+  const [isVolunteer, setIsVolunteer] = useState(false);
   const [pushEnabled, setPushEnabled] = useState(true);
   const [darkMode, setDarkMode] = useState(false);
   const [showLanguageModal, setShowLanguageModal] = useState(false);
@@ -43,6 +44,7 @@ export default function SettingsScreen() {
       setProfile(res.data);
       setEditName(res.data.fullName);
       setEditPhone(res.data.phone || '');
+      setIsVolunteer(!!res.data.isVolunteer);
     } catch (err: any) {
       // Fallback to cached user
       const cached = await getUser();
@@ -54,10 +56,12 @@ export default function SettingsScreen() {
           phone: cached.phone,
           role: cached.role,
           isActive: true,
+          isVolunteer: cached.isVolunteer,
           createdAt: '',
         });
         setEditName(cached.fullName);
         setEditPhone(cached.phone || '');
+        setIsVolunteer(!!cached.isVolunteer);
       }
     } finally {
       setLoading(false);
@@ -82,6 +86,22 @@ export default function SettingsScreen() {
       Alert.alert('Error', err.message || 'Failed to update profile');
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function handleVolunteerToggle(value: boolean) {
+    setIsVolunteer(value);
+    try {
+      await patchMeApi({ isVolunteer: value });
+      Alert.alert(
+        value ? 'Volunteer Mode Activated' : 'Volunteer Mode Off',
+        value 
+          ? 'You will now receive emergency dispatch requests if someone nearby needs help.'
+          : 'You will no longer receive emergency dispatch requests.'
+      );
+    } catch (err: any) {
+      setIsVolunteer(!value); // Revert on failure
+      Alert.alert('Error', 'Failed to update volunteer status.');
     }
   }
 
@@ -230,6 +250,27 @@ export default function SettingsScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Preferences</Text>
           <View style={styles.card}>
+            
+            {/* Community Volunteer Toggle */}
+            <View style={styles.settingRow}>
+              <View style={styles.settingRowLeft}>
+                <View style={[styles.iconBox, { backgroundColor: '#E8F5E9' }]}>
+                  <Ionicons name="medical" size={20} color="#2E7D32" />
+                </View>
+                <View>
+                  <Text style={styles.settingRowTitle}>Community Volunteer</Text>
+                  <Text style={{fontSize: 12, color: '#7A8BA8', marginTop: 2}}>Receive nearby SOS dispatch requests</Text>
+                </View>
+              </View>
+              <Switch
+                value={isVolunteer}
+                onValueChange={handleVolunteerToggle}
+                trackColor={{ false: '#CFD8E3', true: '#AED581' }}
+                thumbColor={isVolunteer ? '#7CB342' : '#f4f3f4'}
+              />
+            </View>
+
+            <View style={styles.divider} />
             
             {/* Language Selection */}
             <Pressable 

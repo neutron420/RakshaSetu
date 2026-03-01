@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Pressable, ActivityIndicator, Platform } from 'react-native';
+import { View, Text, StyleSheet, Pressable, ActivityIndicator, Platform, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import MapView, { Marker } from 'react-native-maps';
@@ -37,6 +37,10 @@ export default function ExploreScreen() {
   const [selectedIncident, setSelectedIncident] = useState<Incident | null>(null);
   const [fetchingAutomated, setFetchingAutomated] = useState(false);
 
+  // Dispatch Tracking
+  const [responderLoc, setResponderLoc] = useState<{ latitude: number, longitude: number } | null>(null);
+  const [isDispatchActive, setIsDispatchActive] = useState(false);
+
   useEffect(() => {
     (async () => {
       try {
@@ -72,8 +76,32 @@ export default function ExploreScreen() {
       setCenters(prev => prev.map(c => c.id === payload.id ? { ...c, status: payload.status ?? c.status, currentCount: payload.currentCount ?? c.currentCount } as ReliefCenter : c));
     });
 
-    return () => unsubscribe();
-  }, []);
+    const offDispatchAccept = socketService.on('DISPATCH_ACCEPTED', (payload: any) => {
+      setIsDispatchActive(true);
+      Alert.alert('Help is on the way!', 'A volunteer has accepted your dispatch request. They are now visible on the map.');
+      if (socketService.socket?.readyState === WebSocket.OPEN) {
+        socketService.socket.send(JSON.stringify({
+          type: 'location:subscribe',
+          payload: { targetUserId: payload.responderId }
+        }));
+      }
+    });
+
+    const offLocUpdate = socketService.on('location:update', (payload: any) => {
+      if (isDispatchActive) {
+        setResponderLoc({
+          latitude: payload.latitude,
+          longitude: payload.longitude
+        });
+      }
+    });
+
+    return () => {
+      unsubscribe();
+      offDispatchAccept();
+      offLocUpdate();
+    }
+  }, [isDispatchActive]);
 
   async function fetchData(lat: number, lng: number) {
     let cachedCenters: ReliefCenter[] = [];
@@ -179,6 +207,18 @@ export default function ExploreScreen() {
             </Marker>
           );
         })}
+
+        {isDispatchActive && responderLoc && (
+           <Marker
+            coordinate={responderLoc}
+            pinColor="#34C759"
+            zIndex={999}
+           >
+             <View style={[styles.marker, { backgroundColor: '#34C759', borderColor: '#fff', borderWidth: 3 }]}>
+                <Ionicons name="medical" size={16} color="#fff" />
+              </View>
+           </Marker>
+        )}
       </MapView>
 
       {/* Detail Overlay */}

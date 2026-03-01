@@ -1,6 +1,7 @@
 import * as Location from 'expo-location';
 import * as TaskManager from 'expo-task-manager';
 import { patchMeApi } from './api';
+import { socketService } from './socket';
 
 const LOCATION_TASK_NAME = 'background-location-task';
 
@@ -22,6 +23,22 @@ TaskManager.defineTask(LOCATION_TASK_NAME, async ({ data, error }) => {
           latitude,
           longitude
         });
+        
+        // Also fire off a quick WebSocket event for real-time dispatch tracking!
+        const ws = socketService.socket;
+        if (ws && ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify({
+
+            type: "location:update",
+            payload: {
+              latitude,
+              longitude,
+              speed: location.coords.speed || 0,
+              heading: location.coords.heading || 0
+            }
+          }));
+        }
+
       } catch (err) {
         console.warn('[background-location] Failed to update location on backend:', err);
       }

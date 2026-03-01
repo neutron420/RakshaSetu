@@ -22,7 +22,7 @@ type SocketMessage = {
 type Listener = (payload: any) => void;
 
 class SocketService {
-  private socket: WebSocket | null = null;
+  public socket: WebSocket | null = null;
   private listeners: Map<string, Set<Listener>> = new Map();
   private reconnectTimer: any = null;
   private isConnecting = false;

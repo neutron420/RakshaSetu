@@ -43,5 +43,5 @@ apiRouter.use("/incidents", incidentsRouter);
 apiRouter.use("/teams", teamsRouter);
 apiRouter.use("/relief-centers", reliefCentersRouter);
 apiRouter.use("/dispatch", dispatchRouter);
-apiRouter.use("/", assignmentsRouter);   // /incidents/:id/assign, /assignments/*
-apiRouter.use("/", timelineRouter);      // /incidents/:id/timeline
+apiRouter.use("/", assignmentsRouter);  
+apiRouter.use("/", timelineRouter);      
