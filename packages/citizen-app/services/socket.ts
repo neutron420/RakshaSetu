@@ -89,6 +89,14 @@ class SocketService {
     }
   }
 
+  // Allow firing local events to listeners without actual WS message
+  emitLocal(type: string, payload: any) {
+    const set = this.listeners.get(type);
+    if (set) {
+      set.forEach((l) => l(payload));
+    }
+  }
+
   private scheduleReconnect() {
     this.clearReconnect();
     this.reconnectTimer = setTimeout(() => this.connect(), 5000);

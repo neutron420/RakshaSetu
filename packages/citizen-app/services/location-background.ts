@@ -1,6 +1,6 @@
 import * as Location from 'expo-location';
 import * as TaskManager from 'expo-task-manager';
-import { patchMeApi } from './api';
+import { patchMeApi, listIncidentsApi } from './api';
 import { socketService } from './socket';
 
 const LOCATION_TASK_NAME = 'background-location-task';
@@ -23,8 +23,6 @@ TaskManager.defineTask(LOCATION_TASK_NAME, async ({ data, error }) => {
           latitude,
           longitude
         });
-        
-        // Also fire off a quick WebSocket event for real-time dispatch tracking!
         const ws = socketService.socket;
         if (ws && ws.readyState === WebSocket.OPEN) {
           ws.send(JSON.stringify({
@@ -83,5 +81,66 @@ export async function stopBackgroundLocationUpdates() {
   if (isStarted) {
     await Location.stopLocationUpdatesAsync(LOCATION_TASK_NAME);
     console.log('[background-location] Background updates stopped');
+  }
+}
+
+// ─── GEOFENCING ALERTS ───
+const GEOFENCE_TASK_NAME = 'incident-geofence-task';
+
+TaskManager.defineTask(GEOFENCE_TASK_NAME, async ({ data: { eventType, region }, error }: any) => {
+  if (error) {
+    console.error('[geofence-task] Error:', error);
+    return;
+  }
+  if (eventType === Location.GeofencingEventType.Enter) {
+    console.log(`🚨 [geofence-task] ENTERED incident zone:`, region.identifier);
+    // Trigger existing frontend listener via local socket event bypass
+    socketService.emitLocal('EMERGENCY_ALERT', {
+      type: 'Danger Zone',
+      location: `Near an active incident`,
+      severity: 'high'
+    });
+  } else if (eventType === Location.GeofencingEventType.Exit) {
+    console.log(`[geofence-task] EXITED incident zone:`, region.identifier);
+  }
+});
+
+/**
+ * Fetch open incidents and monitor them via background geofencing.
+ */
+export async function startIncidentGeofencing() {
+  const { status: foregroundStatus } = await Location.getForegroundPermissionsAsync();
+  const { status: backgroundStatus } = await Location.getBackgroundPermissionsAsync();
+
+  if (foregroundStatus !== 'granted' || backgroundStatus !== 'granted') {
+    console.warn('[geofence-api] Permissions not granted');
+    return;
+  }
+
+  try {
+    // 1. Fetch active open incidents
+    const res = await listIncidentsApi({ status: 'OPEN' });
+    const activeIncidents = res.data;
+
+    if (activeIncidents.length === 0) {
+      console.log('[geofence-api] No active incidents to geofence.');
+      return;
+    }
+
+    // 2. Map into expo-location GeofenceRegions (e.g. 1km radius)
+    const regions: Location.LocationRegion[] = activeIncidents.map(inc => ({
+      identifier: inc.id,
+      latitude: inc.centroidLat,
+      longitude: inc.centroidLng,
+      radius: 1000, // 1000 meters = 1km radius
+      notifyOnEnter: true,
+      notifyOnExit: false,
+    }));
+
+    // 3. Start Geofencing Task
+    await Location.startGeofencingAsync(GEOFENCE_TASK_NAME, regions);
+    console.log(`[geofence-api] Started tracking ${regions.length} active incidents.`);
+  } catch (err) {
+    console.error('[geofence-api] Failed to start geofencing:', err);
   }
 }

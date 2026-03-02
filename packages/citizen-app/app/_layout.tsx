@@ -9,7 +9,7 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import Constants, { ExecutionEnvironment } from 'expo-constants';
 import { socketService } from '@/services/socket';
 import { RedAlertModal } from '@/components/alerts/RedAlertModal';
-import { startBackgroundLocationUpdates } from '@/services/location-background';
+import { startBackgroundLocationUpdates, startIncidentGeofencing } from '@/services/location-background';
 import { requestBlePermissions } from '@/services/ble-mesh/permissions';
 import { startBackgroundBLEScanner, stopBLEScanner } from '@/services/ble-mesh/scanner';
 import { ChatFab } from '@/components/ChatFab';
@@ -108,6 +108,7 @@ export default function RootLayout() {
 
     // Start background location tracking for EWS
     void startBackgroundLocationUpdates();
+    void startIncidentGeofencing();
 
     // Start BLE Mesh Scanner — detect offline SOS beacons from nearby victims
     requestBlePermissions().then((granted) => {
