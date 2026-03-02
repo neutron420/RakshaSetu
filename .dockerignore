@@ -1,0 +1,11 @@
+node_modules
+.git
+.gitignore
+*.md
+docs/
+.qoder/
+packages/citizen-app/
+.env
+.env.*
+!.env.example
+package-lock.json

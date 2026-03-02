@@ -6,7 +6,6 @@ import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
 
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import Constants, { ExecutionEnvironment } from 'expo-constants';
 import { socketService } from '@/services/socket';
 import { RedAlertModal } from '@/components/alerts/RedAlertModal';
 import { startBackgroundLocationUpdates, startIncidentGeofencing } from '@/services/location-background';
@@ -93,20 +92,9 @@ export default function RootLayout() {
       );
     });
 
-    const isExpoGo = Constants.executionEnvironment === ExecutionEnvironment.StoreClient;
     let notificationCleanup: (() => void) | null = null;
 
-    if (isExpoGo) {
-      console.log('Skipping push notification and background location setup in Expo Go.');
-      return () => {
-        offEmergency();
-        offLegacy();
-        offOutbox();
-        offDispatch();
-      };
-    }
-
-    // Start background location tracking for EWS
+    // Start background location tracking for EWS + Geofence Alerts
     void startBackgroundLocationUpdates();
     void startIncidentGeofencing();
 
