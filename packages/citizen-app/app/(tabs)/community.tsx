@@ -321,7 +321,7 @@ export default function CommunityScreen() {
       ) : (
         <FlatList
           data={incidents}
-          keyExtractor={(i) => i.id}
+          keyExtractor={(i, index) => `${i.id}-${index}`}
           renderItem={renderIncident}
           contentContainerStyle={styles.list}
           showsVerticalScrollIndicator={false}

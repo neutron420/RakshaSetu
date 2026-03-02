@@ -153,7 +153,7 @@ export default function WelcomeScreen() {
           <Text style={styles.buttonArrow}>›</Text>
         </Pressable>
       </Animated.View>
-      ){'}'}
+
 
       {/* Bottom tagline */}
       <Animated.View style={[styles.taglineContainer, { opacity: taglineOpacity }]}>

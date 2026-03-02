@@ -7,7 +7,6 @@
     "icon": "./assets/images/icon.png",
     "scheme": "citizenapp",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
     "ios": {
       "supportsTablet": true
     },
@@ -18,7 +17,6 @@
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
-      "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
       "permissions": [
         "android.permission.ACCESS_COARSE_LOCATION",
@@ -38,7 +36,8 @@
         "android.permission.BLUETOOTH_ADMIN",
         "android.permission.BLUETOOTH_CONNECT"
       ],
-      "package": "com.ritesh004.citizenapp"
+      "package": "com.ritesh004.citizenapp",
+      "googleServicesFile": "./google-services.json"
     },
     "web": {
       "output": "static",

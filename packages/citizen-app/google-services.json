@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "724634849219",
+    "project_id": "rakashasetu",
+    "storage_bucket": "rakashasetu.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:724634849219:android:ae0637e525b2689185f776",
+        "android_client_info": {
+          "package_name": "com.ritesh004.citizenapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCmRH2cUQsmbGPdVtYJH-QGmtFalwpDbDU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

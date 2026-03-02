@@ -16,7 +16,7 @@ export async function startDispatchWorker() {
         [TOPICS.DISPATCH_REQUEST],
         async ({ message }) => {
           const value = JSON.parse(message.value?.toString() ?? "{}");
-          const { incidentId, category, latitude, longitude, requiredSkills } = value.payload || {};
+          const { incidentId, category, latitude, longitude, requiredSkills, reporterId } = value.payload || {};
 
           if (!incidentId || !latitude || !longitude) {
             console.warn("[dispatch-worker] Missing location or incidentId data");
@@ -26,16 +26,18 @@ export async function startDispatchWorker() {
           console.log(`[dispatch-worker] Processing dispatch for incident: ${incidentId}`);
 
           try {
-            // Find volunteers within 2km (2000 meters)
+            // Find volunteers within 2km (2000 meters), excluding the reporter
             const searchRadiusMeters = 2000;
 
             // This PostGIS query explicitly searches for isVolunteer = true
+            // and excludes the user who submitted the SOS report
             const nearbyVolunteers = await prisma.$queryRaw<{ id: string }[]>`
               SELECT "id"::text as "id"
               FROM "User"
               WHERE "isActive" = true
                 AND "isVolunteer" = true
                 AND "lastLocationGeo" IS NOT NULL
+                AND (${reporterId}::text IS NULL OR "id"::text != ${reporterId || ''})
                 AND ST_DWithin(
                   "lastLocationGeo",
                   ST_SetSRID(ST_MakePoint(${longitude}, ${latitude}), 4326)::geography,

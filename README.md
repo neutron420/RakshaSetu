@@ -512,16 +512,16 @@ RakshaSetu/
 erDiagram
     User ||--o{ SosReport : submits
     User ||--o{ Assignment : receives
-    User ||--o{ Team_Members : belongs_to
+    User ||--o{ TeamMembers : belongs_to
     SosReport ||--o{ SosMedia : has
     SosReport }o--|| Incident : linked_to
     Incident ||--o{ Assignment : has
     Incident ||--o{ IncidentTimeline : tracks
     Incident ||--o{ IncidentMedia : has
-    Team ||--o{ Team_Members : contains
+    Team ||--o{ TeamMembers : contains
     Team ||--o{ Assignment : assigned_to
-    NaturalDisasterAlert ||--o| Incident : may_create
-    ReliefCenter ||--o| Incident : near
+    NaturalDisasterAlert |o--o| Incident : may_create
+    ReliefCenter |o--o| Incident : near
 
     User {
         uuid id PK
@@ -530,7 +530,7 @@ erDiagram
         string fullName
         enum role
         boolean isVolunteer
-        enum[] skills
+        enum skills
         geography lastLocationGeo
         string pushToken
     }

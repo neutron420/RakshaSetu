@@ -2,6 +2,7 @@ import * as Location from 'expo-location';
 import * as TaskManager from 'expo-task-manager';
 import { patchMeApi, listIncidentsApi } from './api';
 import { socketService } from './socket';
+import { getToken } from './auth-store';
 
 const LOCATION_TASK_NAME = 'background-location-task';
 
@@ -45,6 +46,11 @@ TaskManager.defineTask(LOCATION_TASK_NAME, async ({ data, error }) => {
 });
 
 export async function startBackgroundLocationUpdates() {
+  const token = await getToken();
+  if (!token) {
+    console.log('[background-location] Not logged in, skipping.');
+    return;
+  }
   const { status: foregroundStatus } = await Location.getForegroundPermissionsAsync();
   const { status: backgroundStatus } = await Location.getBackgroundPermissionsAsync();
 
@@ -117,6 +123,12 @@ export async function startIncidentGeofencing() {
     return;
   }
 
+  const token = await getToken();
+  if (!token) {
+    console.log('[geofence-api] Not logged in, skipping.');
+    return;
+  }
+
   try {
     // 1. Fetch active open incidents
     const res = await listIncidentsApi({ status: 'OPEN' });
@@ -140,7 +152,7 @@ export async function startIncidentGeofencing() {
     // 3. Start Geofencing Task
     await Location.startGeofencingAsync(GEOFENCE_TASK_NAME, regions);
     console.log(`[geofence-api] Started tracking ${regions.length} active incidents.`);
-  } catch (err) {
-    console.error('[geofence-api] Failed to start geofencing:', err);
+  } catch (err: any) {
+    console.warn('[geofence-api] Geofencing unavailable:', err?.message || err);
   }
 }
