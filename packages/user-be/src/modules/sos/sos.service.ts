@@ -6,6 +6,7 @@ import type { CreateSosInput } from "./sos.schema";
 import { findNearbyIncident, linkReportToIncident } from "../incidents/incidents.repo";
 import { create as createIncident } from "../incidents/incidents.service";
 import { processSOSMessage } from "../../common/utils/ai-translator";
+import { send as kafkaSend, TOPICS } from "@rakshasetu/kafka";
 
 export async function submitSos(reporterId: string, input: CreateSosInput) {
   if (input.clientReportId) {
@@ -98,6 +99,22 @@ export async function submitSos(reporterId: string, input: CreateSosInput) {
       latitude: input.latitude,
       longitude: input.longitude,
     });
+
+    // ── Trigger Volunteer Dispatch via Kafka ──────────────────────
+    try {
+      await kafkaSend(TOPICS.DISPATCH_REQUEST, targetIncidentId, {
+        eventType: "DISPATCH_REQUEST",
+        payload: {
+          incidentId: targetIncidentId,
+          category: input.category,
+          latitude: input.latitude,
+          longitude: input.longitude,
+        }
+      });
+      console.log(`[sos:submit] Dispatched DISPATCH_REQUEST to Kafka for incident ${targetIncidentId}`);
+    } catch (kafkaErr) {
+      console.error(`[sos:submit] Failed to send DISPATCH_REQUEST to Kafka:`, kafkaErr);
+    }
   } catch (err: any) {
     const errMsg = `[sos:submit] CRITICAL: Auto-incident logic FAILED for report ${created.id}: ${err.message}`;
     console.error(errMsg);

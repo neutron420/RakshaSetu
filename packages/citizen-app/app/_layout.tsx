@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
+import { Alert } from 'react-native';
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
-import { Stack } from 'expo-router';
+import { Stack, router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
 
@@ -31,9 +32,18 @@ export default function RootLayout() {
     // ── WebSocket Alert Listener (Works in Expo Go!) ──
     const handleAlert = (payload: any) => {
       console.log('🚨 [EWS] Received Emergency Alert via WebSocket:', payload);
+      // Safely convert location to a string
+      let locationStr = 'Your Area';
+      if (typeof payload.location === 'string') {
+        locationStr = payload.location;
+      } else if (payload.location?.name) {
+        locationStr = payload.location.name;
+      } else if (payload.location?.lat) {
+        locationStr = `Lat: ${payload.location.lat}, Lng: ${payload.location.lng}`;
+      }
       setAlertData({
         type: payload.disasterType || payload.type || 'Emergency',
-        location: payload.location?.name || payload.location || 'Your Area',
+        location: locationStr,
         severity: payload.severity || 'critical'
       });
       setAlertVisible(true);
@@ -56,6 +66,33 @@ export default function RootLayout() {
     const offLegacy = socketService.on('NATURAL_DISASTER', handleAlert);
     const offOutbox = socketService.on('outbox:NaturalDisasterAlert', handleOutboxAlert);
 
+    // Volunteer Dispatch pop-up listener
+    const offDispatch = socketService.on('VOLUNTEER_DISPATCH', (payload: any) => {
+      console.log('🚨 [DISPATCH] Volunteer dispatch request received:', payload);
+      Alert.alert(
+        '🚨 Emergency Nearby!',
+        `A ${payload.category || 'critical'} emergency needs your help. Can you respond?`,
+        [
+          { text: 'Not Now', style: 'cancel' },
+          {
+            text: 'YES, I WILL HELP',
+            style: 'default',
+            onPress: () => {
+              router.push({
+                pathname: '/dispatch-request',
+                params: {
+                  incidentId: payload.incidentId,
+                  category: payload.category,
+                  distance: '2'
+                }
+              } as any);
+            }
+          }
+        ],
+        { cancelable: false }
+      );
+    });
+
     const isExpoGo = Constants.executionEnvironment === ExecutionEnvironment.StoreClient;
     let notificationCleanup: (() => void) | null = null;
 
@@ -65,6 +102,7 @@ export default function RootLayout() {
         offEmergency();
         offLegacy();
         offOutbox();
+        offDispatch();
       };
     }
 
@@ -109,6 +147,7 @@ export default function RootLayout() {
       offEmergency();
       offLegacy();
       offOutbox();
+      offDispatch();
       stopBLEScanner();
     };
   }, []);
@@ -123,6 +162,7 @@ export default function RootLayout() {
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="incident/[id]" />
         <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
+        <Stack.Screen name="dispatch-request" options={{ presentation: 'modal', headerShown: false }} />
       </Stack>
       <StatusBar style="auto" />
       

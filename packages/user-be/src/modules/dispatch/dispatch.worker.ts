@@ -1,6 +1,7 @@
 import { runConsumer, TOPICS } from "@rakshasetu/kafka";
 import { prisma } from "../../common/db/prisma";
 import { sendNotificationToUsers } from "../../common/services/notification.service";
+import { sendToUser } from "../../ws";
 import { getUserLatestLocation } from "../../ws/location.service";
 
 // This runs continuously in the background to find available volunteers
@@ -59,6 +60,19 @@ export async function startDispatchWorker() {
                   location: { lat: latitude, lng: longitude }
                 }
               );
+
+              // Also send via WebSocket for real-time in-app pop-up
+              for (const volunteerId of volunteerIds) {
+                sendToUser(volunteerId, {
+                  type: "VOLUNTEER_DISPATCH",
+                  payload: {
+                    incidentId,
+                    category,
+                    latitude,
+                    longitude
+                  }
+                });
+              }
 
               console.log(`[dispatch-worker] Sent dispatch requests to: [${volunteerIds.join(", ")}]`);
             }

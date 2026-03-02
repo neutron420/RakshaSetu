@@ -2,7 +2,6 @@ import { randomUUID } from "node:crypto";
 import { prisma } from "../../common/db/prisma";
 import type { CreateIncidentInput, ListIncidentsQuery, UpdateIncidentInput, ListNearbyQuery } from "./incidents.schema";
 
-// ── Row types ────────────────────────────────────────────────────────
 
 export interface IncidentRow {
   id: string;

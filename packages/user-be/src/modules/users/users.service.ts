@@ -8,6 +8,8 @@ function toProfile(user: {
   fullName: string;
   phone: string | null;
   role: string;
+  isVolunteer?: boolean;
+  skills?: string[];
   createdAt: Date;
   updatedAt: Date;
 }) {
@@ -17,6 +19,8 @@ function toProfile(user: {
     fullName: user.fullName,
     phone: user.phone,
     role: user.role,
+    isVolunteer: user.isVolunteer ?? false,
+    skills: user.skills ?? [],
     createdAt: user.createdAt,
     updatedAt: user.updatedAt,
   };

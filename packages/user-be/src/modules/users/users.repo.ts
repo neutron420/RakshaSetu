@@ -6,7 +6,7 @@ export async function findUserById(id: string) {
 }
 
 export async function updateUserById(id: string, input: UpdateMeInput) {
-  const { fullName, phone, pushToken, latitude, longitude } = input;
+  const { fullName, phone, pushToken, latitude, longitude, isVolunteer, skills } = input;
 
   const rows = await prisma.$queryRaw<any[]>`
     UPDATE "User"
@@ -25,6 +25,14 @@ export async function updateUserById(id: string, input: UpdateMeInput) {
                             THEN ST_SetSRID(ST_MakePoint(${longitude}, ${latitude}), 4326)::geography
                             ELSE "lastLocationGeo"
                           END,
+      "isVolunteer" = CASE
+                        WHEN ${isVolunteer !== undefined} THEN ${isVolunteer}
+                        ELSE "isVolunteer"
+                      END,
+      "skills" = CASE
+                   WHEN ${skills !== undefined} THEN ${skills}::"VolunteerSkill"[]
+                   ELSE "skills"
+                 END,
       "updatedAt" = NOW()
     WHERE "id" = ${id}::uuid
     RETURNING *

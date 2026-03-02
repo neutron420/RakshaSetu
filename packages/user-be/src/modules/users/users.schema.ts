@@ -7,6 +7,8 @@ export const updateMeSchema = z
     pushToken: z.string().optional(),
     latitude: z.number().min(-90).max(90).optional(),
     longitude: z.number().min(-180).max(180).optional(),
+    isVolunteer: z.boolean().optional(),
+    skills: z.array(z.string()).optional(),
   })
   .refine((data) => Object.keys(data).length > 0, {
     message: "At least one field is required",
