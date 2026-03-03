@@ -8,7 +8,7 @@ const rootEnvPath = path.resolve(currentDir, "../../../../.env");
 const localEnvPath = path.resolve(currentDir, "../../.env");
 
 dotenv.config({ path: rootEnvPath });
-dotenv.config({ path: localEnvPath, override: true });
+dotenv.config({ path: localEnvPath, override: process.env.NODE_ENV !== "production" });
 
 function asNumber(value: string | undefined, fallback: number): number {
   if (!value) return fallback;

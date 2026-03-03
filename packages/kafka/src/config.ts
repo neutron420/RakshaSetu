@@ -1,5 +1,5 @@
 
-const brokers = "localhost:9092";
+const brokers = process.env.KAFKA_BROKERS ?? "localhost:9092";
 const clientId = process.env.KAFKA_CLIENT_ID ?? "rakshasetu";
 const enabled = process.env.KAFKA_ENABLED === "true";
 

@@ -13,8 +13,6 @@ FROM oven/bun:1 AS builder
 WORKDIR /app
 
 COPY --from=deps /app/node_modules node_modules
-COPY --from=deps /app/packages/kafka/node_modules packages/kafka/node_modules
-COPY --from=deps /app/packages/user-be/node_modules packages/user-be/node_modules
 
 COPY tsconfig.json ./
 COPY prisma.config.ts ./
