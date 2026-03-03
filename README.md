@@ -1,6 +1,6 @@
 # RakshaSetu
 
-**RakshaSetu** (meaning "Bridge of Protection" in Hindi) is a full-stack, real-time disaster management and citizen safety platform. It combines a React Native mobile application with a high-performance Node.js backend to provide end-to-end emergency response capabilities — from SOS reporting and AI-powered triage to volunteer dispatch and crowd-sourced danger mapping.
+**RakshaSetu** (meaning "Bridge of Protection" in Hindi) is a full-stack, real-time disaster management and citizen safety platform. It combines a React Native mobile application with a high-performance Bun.js backend to provide end-to-end emergency response capabilities — from SOS reporting and AI-powered triage to volunteer dispatch and crowd-sourced danger mapping.
 
 ---
 
@@ -63,7 +63,7 @@ graph TB
     end
 
     subgraph "External Services"
-        H["Neon PostgreSQL + PostGIS"]
+        H["AWS RDS PostgreSQL + PostGIS"]
         I["Redis (Rate Limiting + Cache)"]
         J["OpenAI GPT (AI Triage)"]
         K["AWS Transcribe / Polly"]
@@ -428,8 +428,11 @@ For scenarios with no internet connectivity:
 
 | Service | Purpose |
 |---|---|
-| Neon | Managed PostgreSQL with PostGIS |
-| RedisLabs | Managed Redis |
+| AWS RDS (PostgreSQL + PostGIS) | Managed relational database with geospatial extensions |
+| AWS ECS (Fargate) | Serverless container orchestration for backend and Kafka |
+| AWS ECR | Private Docker image registry |
+| AWS ALB | Application Load Balancer for stable endpoint and HTTPS termination |
+| RedisLabs | Managed Redis for rate limiting and caching |
 | Cloudflare R2 | Object storage for media uploads |
 | AWS Transcribe | Speech-to-text |
 | AWS Polly | Text-to-speech |
@@ -713,7 +716,7 @@ The system implements the transactional outbox pattern to ensure reliable event 
 ```mermaid
 graph LR
     subgraph "Load Balancer"
-        LB["NGINX / ALB"]
+        LB["AWS ALB"]
     end
 
     subgraph "API Instances"
@@ -748,7 +751,7 @@ The architecture is designed for horizontal scaling at every layer:
 |-----------|-------------------|
 | API Server | Add instances behind a load balancer; no shared in-process state |
 | Kafka Consumers | Add instances to the same consumer group; Kafka redistributes partitions automatically |
-| PostgreSQL | Neon provides read replicas and autoscaling compute; PostGIS indexes remain effective at scale |
+| PostgreSQL | AWS RDS provides read replicas and Multi-AZ failover; PostGIS indexes remain effective at scale |
 | Redis | RedisLabs provides clustering and automatic sharding |
 | WebSocket | Sticky sessions via load balancer; future option to use Redis pub/sub for cross-instance message routing |
 
@@ -794,13 +797,13 @@ For a city-scale deployment (1 million users), the recommended configuration is 
 - [Bun](https://bun.sh/) v1.0+
 - [Docker](https://www.docker.com/) and Docker Compose
 - [Node.js](https://nodejs.org/) v18+ (for Expo CLI)
-- A Neon PostgreSQL database with PostGIS enabled
+- A PostgreSQL database with PostGIS enabled (AWS RDS or local)
 - A Redis instance (local or managed)
 
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/your-username/RakshaSetu.git
+git clone https://github.com/neutron420/RakshaSetu.git
 cd RakshaSetu
 ```
 
@@ -855,28 +858,390 @@ npx eas build --platform android --profile development
 
 ## Deployment
 
-### Docker Compose (Self-Hosted)
+### Infrastructure Overview
 
-Deploy both Kafka and the backend as containers:
+The production deployment runs on AWS with the following architecture:
+
+```
+                        Internet
+                           |
+                    [AWS ALB - Port 80/443]
+                           |
+                    [ECS Fargate Cluster]
+                     /              \
+              [user-be:5001]   [kafka:9092]
+                     |
+            ---------+---------
+            |                 |
+    [AWS RDS PostgreSQL]  [Redis Cloud]
+       (PostGIS)
+```
+
+| Component | AWS Service | Details |
+|-----------|-------------|---------|
+| Backend API | ECS Fargate | Bun.js server on port 5001 |
+| Kafka Broker | ECS Fargate | KRaft mode, same task as backend |
+| Database | RDS PostgreSQL | PostGIS enabled, ap-south-1 |
+| Load Balancer | ALB | HTTP/HTTPS traffic distribution |
+| Container Registry | ECR | Private Docker image storage |
+| Cache / Rate Limiter | Redis Cloud | External managed Redis |
+
+### Prerequisites
+
+- AWS CLI configured with appropriate credentials
+- Docker installed locally
+- An AWS account with access to ECR, ECS, RDS, and EC2
+
+---
+
+### Step 1: Set Up RDS PostgreSQL with PostGIS
+
+#### 1.1 Create the RDS Instance
+
+1. Navigate to **AWS Console > RDS > Create database**
+2. Select **PostgreSQL** as the engine
+3. Choose the appropriate instance class (e.g., `db.t3.micro` for development)
+4. Configure the following:
+   - DB instance identifier: `rakshasetu-db`
+   - Master username: `postgres`
+   - Set a secure master password
+   - VPC: Use the default VPC or create a dedicated one
+   - Public access: Yes (for initial setup; restrict later)
+5. Under **Additional configuration**, set the initial database name to `postgres`
+6. Click **Create database**
+
+#### 1.2 Configure the Security Group
+
+1. Navigate to **RDS > Databases > rakshasetu-db > Connectivity & security**
+2. Click the VPC security group link
+3. Add an inbound rule:
+   - Type: PostgreSQL (5432)
+   - Source: Your IP address for local access, and the ECS security group for production
+
+#### 1.3 Enable PostGIS Extension
+
+PostGIS is required for geographic data types and spatial queries. Enable it by running:
+
+```bash
+cd packages/user-be
+bun run scripts/enable-postgis.ts
+```
+
+Or connect directly and execute:
+
+```sql
+CREATE EXTENSION IF NOT EXISTS postgis;
+```
+
+#### 1.4 Push the Database Schema
+
+```bash
+# From the project root
+bunx prisma db push
+```
+
+#### 1.5 Verify the Schema
+
+Open Prisma Studio to browse the tables:
+
+```bash
+bunx prisma studio
+```
+
+Alternatively, connect using pgAdmin:
+1. Download and install pgAdmin from https://www.pgadmin.org
+2. Register a new server with the RDS endpoint
+3. Set SSL mode to **Require** in the SSL tab
+4. Browse **Schemas > public > Tables** to verify all tables exist
+
+**Important**: The `DATABASE_URL` must include `?sslmode=require` for RDS connections:
+
+```
+DATABASE_URL="postgresql://postgres:<password>@<rds-endpoint>:5432/postgres?sslmode=require"
+```
+
+---
+
+### Step 2: Create an ECR Repository
+
+ECR stores the Docker image that ECS will pull from.
+
+```bash
+# Login to ECR
+aws ecr get-login-password --region ap-south-1 | docker login --username AWS --password-stdin <ACCOUNT_ID>.dkr.ecr.ap-south-1.amazonaws.com
+
+# Create the repository
+aws ecr create-repository --repository-name rakshasetu-backend --region ap-south-1
+```
+
+---
+
+### Step 3: Build and Push the Docker Image
+
+The root Dockerfile uses a multi-stage build that includes both the Kafka package and the backend:
+
+```bash
+# Build the image
+docker build -t rakshasetu-backend .
+
+# Tag for ECR
+docker tag rakshasetu-backend:latest <ACCOUNT_ID>.dkr.ecr.ap-south-1.amazonaws.com/rakshasetu-backend:latest
+
+# Push to ECR
+docker push <ACCOUNT_ID>.dkr.ecr.ap-south-1.amazonaws.com/rakshasetu-backend:latest
+```
+
+The Dockerfile structure:
+
+```
+Stage 1 (deps)    - Install dependencies with bun install --frozen-lockfile
+Stage 2 (builder) - Copy source code and generate Prisma client
+Stage 3 (runner)  - Slim production image with only runtime artifacts
+```
+
+---
+
+### Step 4: Create an ECS Cluster
+
+1. Navigate to **AWS Console > ECS > Clusters > Create Cluster**
+2. Configure:
+   - Cluster name: `rakshasetu-cluster`
+   - Infrastructure: **AWS Fargate**
+3. Click **Create**
+
+---
+
+### Step 5: Create the Task Definition
+
+The task definition defines two containers running in the same Fargate task. Containers within the same task share `localhost`, so the backend reaches Kafka at `localhost:9092`.
+
+1. Navigate to **ECS > Task Definitions > Create new task definition**
+2. Configure the task:
+   - Family: `rakshasetu-task`
+   - Launch type: **AWS Fargate**
+   - CPU: `2 vCPU`
+   - Memory: `4 GB`
+   - Task execution role: `ecsTaskExecutionRole`
+
+#### Container 1: Kafka
+
+| Setting | Value |
+|---------|-------|
+| Name | `kafka` |
+| Image | `apache/kafka:latest` |
+| Essential | Yes |
+| Port | `9092` (TCP) |
+
+Environment variables:
+
+| Key | Value |
+|-----|-------|
+| `KAFKA_NODE_ID` | `1` |
+| `KAFKA_PROCESS_ROLES` | `broker,controller` |
+| `KAFKA_LISTENERS` | `PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093` |
+| `KAFKA_ADVERTISED_LISTENERS` | `PLAINTEXT://localhost:9092` |
+| `KAFKA_CONTROLLER_LISTENER_NAMES` | `CONTROLLER` |
+| `KAFKA_INTER_BROKER_LISTENER_NAME` | `PLAINTEXT` |
+| `KAFKA_CONTROLLER_QUORUM_VOTERS` | `1@localhost:9093` |
+| `KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR` | `1` |
+| `KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR` | `1` |
+| `KAFKA_TRANSACTION_STATE_LOG_MIN_ISR` | `1` |
+| `KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS` | `0` |
+| `KAFKA_LOG_DIRS` | `/tmp/kraft-combined-logs` |
+
+#### Container 2: user-be
+
+| Setting | Value |
+|---------|-------|
+| Name | `user-be` |
+| Image | `<ACCOUNT_ID>.dkr.ecr.ap-south-1.amazonaws.com/rakshasetu-backend:latest` |
+| Essential | Yes |
+| Port | `5001` (TCP, HTTP) |
+| Startup dependency | Kafka container (condition: START) |
+
+Environment variables:
+
+| Key | Value |
+|-----|-------|
+| `NODE_ENV` | `production` |
+| `USER_BE_PORT` | `5001` |
+| `KAFKA_BROKERS` | `localhost:9092` |
+| `KAFKA_ENABLED` | `true` |
+| `KAFKA_CLIENT_ID` | `rakshasetu` |
+| `DATABASE_URL` | `postgresql://postgres:<password>@<rds-endpoint>:5432/postgres?sslmode=require` |
+| `JWT_SECRET` | Your JWT secret |
+| `JWT_EXPIRES_IN` | `7d` |
+| `REDIS_URL` | Your Redis connection string |
+| `R2_ENDPOINT` | Cloudflare R2 endpoint |
+| `R2_ACCESS_KEY_ID` | R2 access key |
+| `R2_SECRET_ACCESS_KEY` | R2 secret key |
+| `R2_BUCKET_NAME` | `rakshasetu` |
+| `R2_PUBLIC_DOMAIN` | R2 public domain |
+
+---
+
+### Step 6: Set Up the Application Load Balancer (ALB)
+
+An ALB provides a stable DNS endpoint that does not change when ECS tasks restart. Without an ALB, the public IP assigned to a Fargate task changes on every deployment or task restart.
+
+#### 6.1 Create a Target Group
+
+1. Navigate to **EC2 > Target Groups > Create target group**
+2. Configure:
+   - Target type: **IP addresses** (required for Fargate)
+   - Name: `rakshasetu-tg`
+   - Protocol: HTTP
+   - Port: `5001`
+   - VPC: Same VPC as the RDS instance
+   - Health check path: `/health`
+   - Health check protocol: HTTP
+3. Click **Create** (do not register targets manually; ECS handles this)
+
+#### 6.2 Create the Load Balancer
+
+1. Navigate to **EC2 > Load Balancers > Create Load Balancer > Application Load Balancer**
+2. Configure:
+   - Name: `rakshasetu-alb`
+   - Scheme: Internet-facing
+   - IP address type: IPv4
+   - Network mapping: Select the same VPC as RDS with at least 2 subnets in different availability zones
+   - Security group: Create a new security group (`rakshasetu-alb-sg`) with inbound rules:
+     - HTTP (80) from `0.0.0.0/0`
+     - HTTPS (443) from `0.0.0.0/0` (when SSL is configured)
+   - Listener: HTTP on port 80, forward to `rakshasetu-tg`
+3. Click **Create**
+
+#### 6.3 Note the ALB DNS
+
+After creation, the ALB provides a DNS name:
+
+```
+rakshasetu-alb-XXXXXXXXX.ap-south-1.elb.amazonaws.com
+```
+
+This is the stable endpoint for the API.
+
+---
+
+### Step 7: Create the ECS Service
+
+1. Navigate to **ECS > Clusters > rakshasetu-cluster > Create Service**
+2. Configure:
+   - Launch type: **Fargate**
+   - Task definition: `rakshasetu-task` (latest revision)
+   - Service name: `rakshasetu-service`
+   - Desired tasks: `1`
+3. Networking:
+   - VPC: Same as RDS
+   - Subnets: Select public subnets
+   - Security group: Create `rakshasetu-ecs-sg` with:
+     - Inbound: TCP 5001 from the ALB security group (`rakshasetu-alb-sg`)
+     - Outbound: All traffic
+   - Auto-assign public IP: Enabled
+4. Load balancing:
+   - Type: Application Load Balancer
+   - Load balancer: `rakshasetu-alb`
+   - Container to load balance: `user-be:5001`
+   - Target group: `rakshasetu-tg`
+5. Click **Create**
+
+---
+
+### Step 8: Configure Security Groups
+
+Three security groups are involved in the production setup:
+
+| Security Group | Inbound Rules | Purpose |
+|---------------|---------------|---------|
+| `rakshasetu-alb-sg` | HTTP (80) from `0.0.0.0/0`, HTTPS (443) from `0.0.0.0/0` | ALB accepts public traffic |
+| `rakshasetu-ecs-sg` | TCP 5001 from `rakshasetu-alb-sg` | ECS accepts traffic only from ALB |
+| `rakshasetu-db-sg` | PostgreSQL (5432) from `rakshasetu-ecs-sg` | RDS accepts traffic only from ECS |
+
+This creates a layered security model where:
+- The internet can only reach the ALB
+- The ALB can only reach ECS on port 5001
+- ECS can only reach RDS on port 5432
+
+---
+
+### Step 9: Verify the Deployment
+
+```bash
+# Check the ALB endpoint
+curl http://rakshasetu-alb-XXXXXXXXX.ap-south-1.elb.amazonaws.com/health
+
+# Expected response:
+# {"success":true,"service":"user-be","status":"ok","wsClients":0}
+```
+
+Monitor ECS task health:
+
+```bash
+# List running tasks
+aws ecs list-tasks --cluster rakshasetu-cluster --region ap-south-1
+
+# Describe task status
+aws ecs describe-tasks \
+  --cluster rakshasetu-cluster \
+  --tasks <TASK_ARN> \
+  --region ap-south-1 \
+  --query "tasks[0].containers[*].{Name:name,Status:lastStatus,Health:healthStatus}" \
+  --output table
+```
+
+View container logs in **ECS > Tasks > (select task) > Logs** tab, or via CloudWatch Logs if configured.
+
+---
+
+### Step 10: Adding HTTPS (Optional but Recommended)
+
+1. Request a free SSL certificate from **AWS Certificate Manager (ACM)**
+   - Navigate to ACM > Request a certificate
+   - Enter your domain name (e.g., `api.rakshasetu.in`)
+   - Validate via DNS
+2. Add an HTTPS listener to the ALB:
+   - Navigate to **EC2 > Load Balancers > rakshasetu-alb > Listeners**
+   - Add listener: HTTPS (443), forward to `rakshasetu-tg`, select the ACM certificate
+3. Redirect HTTP to HTTPS:
+   - Edit the HTTP (80) listener to redirect to HTTPS (443)
+4. Point your domain to the ALB using a CNAME or Route 53 alias record
+
+---
+
+### Updating the Deployment
+
+When code changes are made, rebuild and push the Docker image:
+
+```bash
+# Build with a new tag
+docker build -t rakshasetu-backend .
+docker tag rakshasetu-backend:latest <ACCOUNT_ID>.dkr.ecr.ap-south-1.amazonaws.com/rakshasetu-backend:latest
+docker push <ACCOUNT_ID>.dkr.ecr.ap-south-1.amazonaws.com/rakshasetu-backend:latest
+
+# Force ECS to pull the new image
+aws ecs update-service \
+  --cluster rakshasetu-cluster \
+  --service rakshasetu-service \
+  --force-new-deployment \
+  --region ap-south-1
+```
+
+---
+
+### Docker Compose (Local Development)
+
+For local development, use Docker Compose to run Kafka and the backend together:
 
 ```bash
 docker compose up --build -d
 ```
 
-Verify the deployment:
+Verify:
 
 ```bash
 curl http://localhost:5001/health
 docker compose logs -f user-be
 ```
-
-### AWS EC2
-
-1. Launch an Ubuntu EC2 instance (t3.medium recommended)
-2. Install Docker and Docker Compose
-3. Clone the repository and configure environment variables
-4. Run `docker compose up --build -d`
-5. Configure security groups to expose port 5001
 
 ### Mobile App Distribution
 
