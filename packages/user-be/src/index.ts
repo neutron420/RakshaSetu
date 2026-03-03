@@ -86,7 +86,7 @@ setTimeout(() => {
     void processOutbox().catch((err) => {
       const msg = err instanceof Error ? err.message : String(err);
       if (msg.includes("Unable to start a transaction")) return; // Neon cold start, ignore
-      console.error("[outbox] error:", msg);
+      console.error("[outbox] error:", err);
     });
   }, 5000);
 }, 10000);
