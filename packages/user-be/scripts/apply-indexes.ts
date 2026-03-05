@@ -1,5 +1,5 @@
 
-import { prisma } from "./src/common/db/prisma";
+import { prisma } from "../src/common/db/prisma";
 import fs from "node:fs";
 import path from "node:path";
 

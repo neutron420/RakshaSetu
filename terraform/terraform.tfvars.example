@@ -1,0 +1,37 @@
+# ============================================================================
+# Example terraform.tfvars — COPY this to terraform.tfvars and fill in values
+# ============================================================================
+# NEVER commit terraform.tfvars to git (it contains secrets).
+# Use TF_VAR_ environment variables in CI/CD instead.
+# ============================================================================
+
+aws_region  = "ap-south-1"
+environment = "production"
+
+# ── Database ─────────────────────────────────────────────────────────────────
+db_password       = "CHANGE_ME_to_a_strong_password"
+db_instance_class = "db.t4g.micro"    # Free tier eligible; use db.t4g.small+ for production
+
+# ── ECS Sizing ───────────────────────────────────────────────────────────────
+backend_cpu           = 512     # 0.5 vCPU
+backend_memory        = 1024    # 1 GB
+backend_desired_count = 2
+kafka_cpu             = 1024    # 1 vCPU
+kafka_memory          = 2048    # 2 GB
+
+# ── Application Secrets ─────────────────────────────────────────────────────
+jwt_secret           = "CHANGE_ME_generate_a_random_string"
+redis_url            = "rediss://default:YOUR_UPSTASH_TOKEN@YOUR_UPSTASH_ENDPOINT:6379"
+r2_endpoint          = "https://YOUR_ACCOUNT_ID.r2.cloudflarestorage.com"
+r2_access_key_id     = ""
+r2_secret_access_key = ""
+r2_bucket_name       = "rakshasetu-media"
+r2_public_domain     = ""
+expo_access_token    = ""
+twilio_account_sid   = ""
+twilio_auth_token    = ""
+twilio_phone_number  = ""
+
+# ── Domain (optional — leave empty to use ALB DNS directly) ─────────────────
+# domain_name     = "api.rakshasetu.com"
+# certificate_arn = "arn:aws:acm:ap-south-1:123456789:certificate/abc-123"

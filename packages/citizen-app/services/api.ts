@@ -2,7 +2,7 @@ import { getToken } from './auth-store';
 
 export const BASE_URL = __DEV__
   ? 'http://172.29.32.165:5001/api/v1'
-  : 'http://52.66.15.191:5001/api/v1';
+  : 'http://rakshasetu-alb-1002000959.ap-south-1.elb.amazonaws.com/api/v1';
 
 type ApiResponse<T = unknown> = {
   success: boolean;
