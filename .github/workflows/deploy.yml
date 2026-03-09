@@ -1,175 +1,175 @@
-name: Deploy RakshaSetu
+# name: Deploy RakshaSetu
 
-on:
-  push:
-    branches: [main]
-    paths-ignore:
-      - "packages/citizen-app/**"
-      - "docs/**"
-      - "*.md"
-  pull_request:
-    branches: [main]
-    paths:
-      - "terraform/**"
-      - "Dockerfile"
-      - "packages/user-be/**"
-      - "packages/kafka/**"
-      - "prisma/**"
+# on:
+#   push:
+#     branches: [main]
+#     paths-ignore:
+#       - "packages/citizen-app/**"
+#       - "docs/**"
+#       - "*.md"
+#   pull_request:
+#     branches: [main]
+#     paths:
+#       - "terraform/**"
+#       - "Dockerfile"
+#       - "packages/user-be/**"
+#       - "packages/kafka/**"
+#       - "prisma/**"
 
-env:
-  AWS_REGION: ap-south-1
-  TF_WORKING_DIR: terraform
+# env:
+#   AWS_REGION: ap-south-1
+#   TF_WORKING_DIR: terraform
 
-jobs:
-  terraform-plan:
-    name: "Terraform Plan"
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      pull-requests: write
+# jobs:
+#   terraform-plan:
+#     name: "Terraform Plan"
+#     runs-on: ubuntu-latest
+#     permissions:
+#       contents: read
+#       pull-requests: write
 
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+#     steps:
+#       - name: Checkout
+#         uses: actions/checkout@v4
 
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: "1.7.0"
+#       - name: Setup Terraform
+#         uses: hashicorp/setup-terraform@v3
+#         with:
+#           terraform_version: "1.7.0"
 
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ env.AWS_REGION }}
+#       - name: Configure AWS Credentials
+#         uses: aws-actions/configure-aws-credentials@v4
+#         with:
+#           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+#           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+#           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Terraform Init
-        working-directory: ${{ env.TF_WORKING_DIR }}
-        run: terraform init
+#       - name: Terraform Init
+#         working-directory: ${{ env.TF_WORKING_DIR }}
+#         run: terraform init
 
-      - name: Terraform Validate
-        working-directory: ${{ env.TF_WORKING_DIR }}
-        run: terraform validate
+#       - name: Terraform Validate
+#         working-directory: ${{ env.TF_WORKING_DIR }}
+#         run: terraform validate
 
-      - name: Terraform Plan
-        working-directory: ${{ env.TF_WORKING_DIR }}
-        run: terraform plan -no-color -out=tfplan
-        env:
-          TF_VAR_db_password: ${{ secrets.TF_VAR_db_password }}
-          TF_VAR_jwt_secret: ${{ secrets.TF_VAR_jwt_secret }}
-          TF_VAR_redis_url: ${{ secrets.TF_VAR_redis_url }}
-          TF_VAR_r2_endpoint: ${{ secrets.TF_VAR_r2_endpoint }}
-          TF_VAR_r2_access_key_id: ${{ secrets.TF_VAR_r2_access_key_id }}
-          TF_VAR_r2_secret_access_key: ${{ secrets.TF_VAR_r2_secret_access_key }}
-          TF_VAR_expo_access_token: ${{ secrets.TF_VAR_expo_access_token }}
-          TF_VAR_twilio_account_sid: ${{ secrets.TF_VAR_twilio_account_sid }}
-          TF_VAR_twilio_auth_token: ${{ secrets.TF_VAR_twilio_auth_token }}
+#       - name: Terraform Plan
+#         working-directory: ${{ env.TF_WORKING_DIR }}
+#         run: terraform plan -no-color -out=tfplan
+#         env:
+#           TF_VAR_db_password: ${{ secrets.TF_VAR_db_password }}
+#           TF_VAR_jwt_secret: ${{ secrets.TF_VAR_jwt_secret }}
+#           TF_VAR_redis_url: ${{ secrets.TF_VAR_redis_url }}
+#           TF_VAR_r2_endpoint: ${{ secrets.TF_VAR_r2_endpoint }}
+#           TF_VAR_r2_access_key_id: ${{ secrets.TF_VAR_r2_access_key_id }}
+#           TF_VAR_r2_secret_access_key: ${{ secrets.TF_VAR_r2_secret_access_key }}
+#           TF_VAR_expo_access_token: ${{ secrets.TF_VAR_expo_access_token }}
+#           TF_VAR_twilio_account_sid: ${{ secrets.TF_VAR_twilio_account_sid }}
+#           TF_VAR_twilio_auth_token: ${{ secrets.TF_VAR_twilio_auth_token }}
 
-      - name: Upload Plan
-        if: github.event_name == 'push'
-        uses: actions/upload-artifact@v4
-        with:
-          name: tfplan
-          path: ${{ env.TF_WORKING_DIR }}/tfplan
+#       - name: Upload Plan
+#         if: github.event_name == 'push'
+#         uses: actions/upload-artifact@v4
+#         with:
+#           name: tfplan
+#           path: ${{ env.TF_WORKING_DIR }}/tfplan
 
-  deploy:
-    name: "Deploy Infrastructure & App"
-    needs: terraform-plan
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      id-token: write
+#   deploy:
+#     name: "Deploy Infrastructure & App"
+#     needs: terraform-plan
+#     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+#     runs-on: ubuntu-latest
+#     permissions:
+#       contents: read
+#       id-token: write
 
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+#     steps:
+#       - name: Checkout
+#         uses: actions/checkout@v4
 
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ env.AWS_REGION }}
+#       - name: Configure AWS Credentials
+#         uses: aws-actions/configure-aws-credentials@v4
+#         with:
+#           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+#           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+#           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: "1.7.0"
-          terraform_wrapper: false
+#       - name: Setup Terraform
+#         uses: hashicorp/setup-terraform@v3
+#         with:
+#           terraform_version: "1.7.0"
+#           terraform_wrapper: false
 
-      - name: Download Plan
-        uses: actions/download-artifact@v4
-        with:
-          name: tfplan
-          path: ${{ env.TF_WORKING_DIR }}
+#       - name: Download Plan
+#         uses: actions/download-artifact@v4
+#         with:
+#           name: tfplan
+#           path: ${{ env.TF_WORKING_DIR }}
 
-      - name: Terraform Init
-        working-directory: ${{ env.TF_WORKING_DIR }}
-        run: terraform init
+#       - name: Terraform Init
+#         working-directory: ${{ env.TF_WORKING_DIR }}
+#         run: terraform init
 
-      - name: Terraform Apply
-        working-directory: ${{ env.TF_WORKING_DIR }}
-        run: terraform apply -auto-approve tfplan
-        env:
-          TF_VAR_db_password: ${{ secrets.TF_VAR_db_password }}
-          TF_VAR_jwt_secret: ${{ secrets.TF_VAR_jwt_secret }}
-          TF_VAR_redis_url: ${{ secrets.TF_VAR_redis_url }}
-          TF_VAR_r2_endpoint: ${{ secrets.TF_VAR_r2_endpoint }}
-          TF_VAR_r2_access_key_id: ${{ secrets.TF_VAR_r2_access_key_id }}
-          TF_VAR_r2_secret_access_key: ${{ secrets.TF_VAR_r2_secret_access_key }}
-          TF_VAR_expo_access_token: ${{ secrets.TF_VAR_expo_access_token }}
-          TF_VAR_twilio_account_sid: ${{ secrets.TF_VAR_twilio_account_sid }}
-          TF_VAR_twilio_auth_token: ${{ secrets.TF_VAR_twilio_auth_token }}
+#       - name: Terraform Apply
+#         working-directory: ${{ env.TF_WORKING_DIR }}
+#         run: terraform apply -auto-approve tfplan
+#         env:
+#           TF_VAR_db_password: ${{ secrets.TF_VAR_db_password }}
+#           TF_VAR_jwt_secret: ${{ secrets.TF_VAR_jwt_secret }}
+#           TF_VAR_redis_url: ${{ secrets.TF_VAR_redis_url }}
+#           TF_VAR_r2_endpoint: ${{ secrets.TF_VAR_r2_endpoint }}
+#           TF_VAR_r2_access_key_id: ${{ secrets.TF_VAR_r2_access_key_id }}
+#           TF_VAR_r2_secret_access_key: ${{ secrets.TF_VAR_r2_secret_access_key }}
+#           TF_VAR_expo_access_token: ${{ secrets.TF_VAR_expo_access_token }}
+#           TF_VAR_twilio_account_sid: ${{ secrets.TF_VAR_twilio_account_sid }}
+#           TF_VAR_twilio_auth_token: ${{ secrets.TF_VAR_twilio_auth_token }}
 
-      - name: Get ECR URL
-        id: ecr
-        working-directory: ${{ env.TF_WORKING_DIR }}
-        run: echo "url=$(terraform output -raw ecr_repository_url)" >> $GITHUB_OUTPUT
+#       - name: Get ECR URL
+#         id: ecr
+#         working-directory: ${{ env.TF_WORKING_DIR }}
+#         run: echo "url=$(terraform output -raw ecr_repository_url)" >> $GITHUB_OUTPUT
 
-      - name: Login to Amazon ECR
-        uses: aws-actions/amazon-ecr-login@v2
+#       - name: Login to Amazon ECR
+#         uses: aws-actions/amazon-ecr-login@v2
 
-      - name: Build & Push Docker Image
-        run: |
-          docker build \
-            -t ${{ steps.ecr.outputs.url }}:latest \
-            -t ${{ steps.ecr.outputs.url }}:${{ github.sha }} \
-            .
-          docker push ${{ steps.ecr.outputs.url }}:latest
-          docker push ${{ steps.ecr.outputs.url }}:${{ github.sha }}
+#       - name: Build & Push Docker Image
+#         run: |
+#           docker build \
+#             -t ${{ steps.ecr.outputs.url }}:latest \
+#             -t ${{ steps.ecr.outputs.url }}:${{ github.sha }} \
+#             .
+#           docker push ${{ steps.ecr.outputs.url }}:latest
+#           docker push ${{ steps.ecr.outputs.url }}:${{ github.sha }}
 
-      - name: Get ECS Details
-        id: ecs
-        working-directory: ${{ env.TF_WORKING_DIR }}
-        run: |
-          echo "cluster=$(terraform output -raw ecs_cluster_name)" >> $GITHUB_OUTPUT
-          echo "service=$(terraform output -raw ecs_backend_service_name)" >> $GITHUB_OUTPUT
+#       - name: Get ECS Details
+#         id: ecs
+#         working-directory: ${{ env.TF_WORKING_DIR }}
+#         run: |
+#           echo "cluster=$(terraform output -raw ecs_cluster_name)" >> $GITHUB_OUTPUT
+#           echo "service=$(terraform output -raw ecs_backend_service_name)" >> $GITHUB_OUTPUT
 
-      - name: Deploy to ECS
-        run: |
-          aws ecs update-service \
-            --cluster ${{ steps.ecs.outputs.cluster }} \
-            --service ${{ steps.ecs.outputs.service }} \
-            --force-new-deployment \
-            --region ${{ env.AWS_REGION }}
+#       - name: Deploy to ECS
+#         run: |
+#           aws ecs update-service \
+#             --cluster ${{ steps.ecs.outputs.cluster }} \
+#             --service ${{ steps.ecs.outputs.service }} \
+#             --force-new-deployment \
+#             --region ${{ env.AWS_REGION }}
 
-      - name: Wait for Deployment
-        run: |
-          aws ecs wait services-stable \
-            --cluster ${{ steps.ecs.outputs.cluster }} \
-            --services ${{ steps.ecs.outputs.service }} \
-            --region ${{ env.AWS_REGION }}
+#       - name: Wait for Deployment
+#         run: |
+#           aws ecs wait services-stable \
+#             --cluster ${{ steps.ecs.outputs.cluster }} \
+#             --services ${{ steps.ecs.outputs.service }} \
+#             --region ${{ env.AWS_REGION }}
 
-      - name: Deployment Summary
-        working-directory: ${{ env.TF_WORKING_DIR }}
-        run: |
-          echo "## Deployment Complete" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "| Resource | Value |" >> $GITHUB_STEP_SUMMARY
-          echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
-          echo "| **ALB URL** | http://$(terraform output -raw alb_dns_name) |" >> $GITHUB_STEP_SUMMARY
-          echo "| **Image Tag** | ${{ github.sha }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| **Cluster** | ${{ steps.ecs.outputs.cluster }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| **Service** | ${{ steps.ecs.outputs.service }} |" >> $GITHUB_STEP_SUMMARY
+#       - name: Deployment Summary
+#         working-directory: ${{ env.TF_WORKING_DIR }}
+#         run: |
+#           echo "## Deployment Complete" >> $GITHUB_STEP_SUMMARY
+#           echo "" >> $GITHUB_STEP_SUMMARY
+#           echo "| Resource | Value |" >> $GITHUB_STEP_SUMMARY
+#           echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
+#           echo "| **ALB URL** | http://$(terraform output -raw alb_dns_name) |" >> $GITHUB_STEP_SUMMARY
+#           echo "| **Image Tag** | ${{ github.sha }} |" >> $GITHUB_STEP_SUMMARY
+#           echo "| **Cluster** | ${{ steps.ecs.outputs.cluster }} |" >> $GITHUB_STEP_SUMMARY
+#           echo "| **Service** | ${{ steps.ecs.outputs.service }} |" >> $GITHUB_STEP_SUMMARY
