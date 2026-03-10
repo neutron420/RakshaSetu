@@ -37,6 +37,8 @@ spec:
           envFrom:
             - configMapRef:
                 name: user-be-config
+            - secretRef:
+                name: user-be-secrets
       containers:
         - name: user-be
           # Important: Change this image name to your actual container registry path after pushing the image.
@@ -48,6 +50,8 @@ spec:
           envFrom:
             - configMapRef:
                 name: user-be-config
+            - secretRef:
+                name: user-be-secrets
 
 ---
 apiVersion: v1
