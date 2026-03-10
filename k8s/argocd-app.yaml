@@ -1,0 +1,21 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: rakshasetu
+  namespace: argocd
+  # The final ArgoCD app definition that ties everything together.
+spec:
+  project: default
+  source:
+    repoURL: "https://github.com/neutron420/RakshaSetu.git" # <-- Update this URL to your GitHub Repository URL
+    targetRevision: HEAD
+    path: k8s/manifests # ArgoCD will watch this folder in your repo
+  destination:
+    server: "https://kubernetes.default.svc"
+    namespace: default
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
