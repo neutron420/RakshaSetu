@@ -1,0 +1,43 @@
+# Dependencies
+node_modules
+
+# Build outputs
+dist
+web-build
+.expo
+
+# Native builds
+android
+ios
+
+# Development files
+*.log
+.env
+.env.*
+!.env.example
+
+# IDE
+.vscode
+.idea
+
+# Git
+.git
+.gitignore
+
+# Test files
+__tests__
+*.test.ts
+*.test.tsx
+*.spec.ts
+*.spec.tsx
+
+# Documentation
+README.md
+*.md
+
+# Config files
+.eslintrc
+eslint.config.js
+tsconfig.json
+app.json
+eas.json
